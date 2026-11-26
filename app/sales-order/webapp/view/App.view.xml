@@ -3,14 +3,14 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
-    xmlns:layout="sap.ui.layout"
+    xmlns:cssgrid="sap.ui.layout.cssgrid"
     xmlns:unified="sap.ui.unified">
 
     <App>
-        <Page showHeader="true" enableScrolling="true">
+        <Page showHeader="true" enableScrolling="true" class="sapUiContentPadding">
 
             <customHeader>
-                <OverflowToolbar height="3.5rem">
+                <OverflowToolbar>
                     <Image
                         id="sapLogo"
                         src="img/sap-logo.svg"
@@ -44,7 +44,7 @@
             </customHeader>
 
             <content>
-                <VBox width="100%" class="sapUiResponsiveContentPadding">
+                <VBox>
 
                     <Title
                         text="Purchase Order Processing"
@@ -54,14 +54,13 @@
                     <Panel expandable="false" class="sapUiNoContentPadding">
                         <content>
 
-                            <layout:Grid
-                                width="100%"
-                                defaultSpan="XL2 L2 M4 S12"
-                                hSpacing="1"
-                                vSpacing="0">
+                            <cssgrid:CSSGrid
+                                width="auto"
+                                gridGap="1rem 1.5rem"
+                                class="po2soFilterGrid sapUiSmallMargin">
 
-                                <layout:content>
-                                    <VBox>
+                                <cssgrid:items>
+                                    <VBox class="po2soField">
                                         <Label text="Search"/>
                                         <SearchField
                                             id="poSearch"
@@ -73,21 +72,21 @@
                                             liveChange=".onSearch"/>
                                     </VBox>
 
-                                    <VBox>
+                                    <VBox class="po2soField">
                                         <Label text="Purchase Order"/>
                                         <Input
                                             value="{filters>/poNumber}"
                                             placeholder="Enter PO number"/>
                                     </VBox>
 
-                                    <VBox>
+                                    <VBox class="po2soField">
                                         <Label text="Customer"/>
                                         <Input
                                             value="{filters>/customer}"
                                             placeholder="Customer name or ID"/>
                                     </VBox>
 
-                                    <VBox>
+                                    <VBox class="po2soField">
                                         <Label text="Status"/>
                                         <Select
                                             selectedKey="{filters>/status}"
@@ -102,7 +101,7 @@
                                         </Select>
                                     </VBox>
 
-                                    <VBox>
+                                    <VBox class="po2soField">
                                         <Label text="File Type"/>
                                         <Select
                                             selectedKey="{filters>/fileType}"
@@ -114,7 +113,7 @@
                                         </Select>
                                     </VBox>
 
-                                    <VBox>
+                                    <VBox class="po2soField">
                                         <Label text="PO Date From"/>
                                         <DatePicker
                                             value="{filters>/dateFrom}"
@@ -123,7 +122,7 @@
                                             width="100%"/>
                                     </VBox>
 
-                                    <VBox>
+                                    <VBox class="po2soField">
                                         <Label text="PO Date To"/>
                                         <DatePicker
                                             value="{filters>/dateTo}"
@@ -132,21 +131,23 @@
                                             width="100%"/>
                                     </VBox>
 
-                                </layout:content>
-                            </layout:Grid>
+                                    <!-- 8th cell: filter actions, aligned with the fields -->
+                                    <HBox justifyContent="End" alignItems="End">
+                                        <Button text="Go"
+                                            type="Emphasized"
+                                            press=".onApplyFilters"
+                                            class="sapUiTinyMarginEnd"/>
+                                        <Button text="Clear"
+                                            type="Transparent"
+                                            press=".onClearFilters"
+                                            class="sapUiTinyMarginEnd"/>
+                                        <Button text="Adapt Filters"
+                                            type="Transparent"
+                                            icon="sap-icon://filter"/>
+                                    </HBox>
 
-                            <OverflowToolbar>
-                                <ToolbarSpacer/>
-                                <Button text="Go"
-                                    type="Emphasized"
-                                    press=".onApplyFilters"/>
-                                <Button text="Clear"
-                                    type="Transparent"
-                                    press=".onClearFilters"/>
-                                <Button text="Adapt Filters"
-                                    type="Transparent"
-                                    icon="sap-icon://filter"/>
-                            </OverflowToolbar>
+                                </cssgrid:items>
+                            </cssgrid:CSSGrid>
 
                         </content>
                     </Panel>
@@ -156,7 +157,8 @@
                         expandable="false"
                         selectedKey="upload"
                         select=".onTabSelect"
-                        class="sapUiSmallMarginTop">
+                        tabDensityMode="Compact"
+                        class="po2soTabs sapUiSmallMarginTop">
 
                         <items>
                             <IconTabFilter
@@ -170,11 +172,10 @@
                                             <VBox
                                                 alignItems="Center"
                                                 justifyContent="Center"
-                                                class="sapUiLargeMargin"
-                                                width="100%">
+                                                class="sapUiMediumMarginTopBottom">
 
                                                 <core:Icon
-                                                    src="sap-icon://cloud-upload"
+                                                    src="sap-icon://upload-to-cloud"
                                                     size="3rem"
                                                     color="#0A6ED1"/>
 
@@ -187,7 +188,7 @@
                                                     text="Select a PDF, CSV or Excel purchase order file."
                                                     class="sapUiSmallMarginBottom"/>
 
-                                                <VBox width="100%">
+                                                <VBox class="po2soUploadForm po2soField sapUiSmallMarginTop">
                                                     <Label text="Customer" labelFor="uploadCustomer"/>
                                                     <Select
                                                         id="uploadCustomer"
@@ -206,7 +207,7 @@
                                                     </Select>
                                                     <Text
                                                         text="Without a customer the PO is extracted but set to Needs Review."
-                                                        class="sapUiTinyMarginBottom"/>
+                                                        class="sapUiTinyMarginTop sapUiMediumMarginBottom"/>
 
                                                     <Label text="Purchase Order File" labelFor="poFileUploader"/>
                                                     <unified:FileUploader
@@ -260,20 +261,17 @@
                             <IconTabFilter
                                 key="processed"
                                 text="Processed POs"
-                                icon="sap-icon://documents"
-                                count="{stats>/processed}"/>
+                                icon="sap-icon://documents"/>
 
                             <IconTabFilter
                                 key="sales"
                                 text="Sales Orders"
-                                icon="sap-icon://sales-order"
-                                count="{stats>/salesOrders}"/>
+                                icon="sap-icon://sales-order"/>
 
                             <IconTabFilter
                                 key="exceptions"
                                 text="Exceptions"
-                                icon="sap-icon://alert"
-                                count="{stats>/exceptions}"/>
+                                icon="sap-icon://alert"/>
                         </items>
 
                         <content>

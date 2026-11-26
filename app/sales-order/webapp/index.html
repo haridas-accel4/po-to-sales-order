@@ -14,12 +14,17 @@
         data-sap-ui-onInit="module:sap/ui/core/ComponentSupport"
         data-sap-ui-resourceRoots='{"po2so.salesorder":"./"}'>
     </script>
+    <style>
+        /* the app fills the window; only the page content scrolls */
+        html, body { height: 100%; margin: 0; overflow: hidden; }
+    </style>
 </head>
 <body class="sapUiBody" id="content">
     <div
         data-sap-ui-component
         data-name="po2so.salesorder"
         data-id="container"
+        data-height="100%"
         data-settings='{"id":"po2so.salesorder"}'>
     </div>
 </body>

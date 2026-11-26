@@ -1,4 +1,5 @@
 import { ExtractionError } from '../errors.js';
+import { cleanText } from '../text.js';
 
 /**
  * Fixed PO template (CSV / XLSX), one purchase order per file:
@@ -15,9 +16,12 @@ const MAX_ITEMS = 1000;
 
 /**
  * @typedef {object} PurchaseOrderData  Common PO structure produced by every extractor.
- * @property {{customerPoNumber:string, poDate:string, requestedDeliveryDate:string|null}} header  ISO dates
+ * @property {{customerPoNumber:string, poDate:string, requestedDeliveryDate:string|null,
+ *             currency?:string|null}} header  ISO dates
  * @property {Array<{lineNumber:number, customerMaterial:string, description:string|null,
- *                   quantity:number, uom:string, unitPrice:number|null}>} items
+ *                   quantity:number, uom:string, unitPrice:number|null,
+ *                   priceUnit?:number, requestedDeliveryDate?:string|null}>} items
+ *   priceUnit defaults to 1; an item delivery date of null falls back to the header date
  * @property {{method:string, confidence:number}} extraction
  */
 
@@ -50,12 +54,12 @@ export function mapColumns(headerRow) {
 
 // ---------------------------------------------------------------- value parsers
 
-const isBlank = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+const isBlank = (v) => v === null || v === undefined || (typeof v === 'string' && cleanText(v) === '');
 
 function toText(v) {
     if (isBlank(v)) return null;
     if (v instanceof Date) return null; // dates are not valid text values here
-    return String(v).trim();
+    return cleanText(v);
 }
 
 function isoDate(y, m, d) {

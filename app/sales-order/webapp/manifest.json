@@ -39,6 +39,9 @@
       "async": true
     },
     "models": {},
+    "resources": {
+      "css": [{ "uri": "css/style.css" }]
+    },
     "resourceRoots": {
       "po2so.salesorder": "./"
     }

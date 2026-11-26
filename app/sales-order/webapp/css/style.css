@@ -1,0 +1,29 @@
+/* Filter bar: 4 equal columns, aligned rows (CSS grid avoids the float wrapping of sap.ui.layout.Grid) */
+.po2soFilterGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+@media (max-width: 1024px) {
+    .po2soFilterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 600px) {
+    .po2soFilterGrid { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+/* Label above its field with a small, consistent gap */
+.po2soField > .sapMLabel {
+    padding-bottom: 0.25rem;
+}
+
+/* Main tabs: let labels use their natural width instead of truncating ("Processed ...") */
+.po2soTabs .sapMITBVertical,
+.po2soTabs .sapMITBVertical .sapMITBFilterWrapper,
+.po2soTabs .sapMITBVertical .sapMITBText {
+    width: auto;
+    max-width: none;
+}
+
+/* Upload form: readable width, centred */
+.po2soUploadForm {
+    width: 100%;
+    max-width: 36rem;
+}

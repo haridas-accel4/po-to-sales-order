@@ -41,7 +41,10 @@ entity InboundOrders : cuid, managed {
 
     customerPoNumber       : String(35);
     poDate                 : Date;
+    /** Default requested delivery date; an item's own requestedDeliveryDate takes precedence */
     requestedDeliveryDate  : Date;
+    /** Document currency of the customer's prices (e.g. USD) */
+    currency               : String(5);
 
     /** Customer identifier supplied with the document (maps via Customers.customerId) */
     customerId             : String(20);
@@ -82,6 +85,11 @@ entity InboundItems : cuid {
 
     /** Customer's price as stated on the PO - informational only, never used as SAP price */
     customerUnitPrice  : Decimal(15,2);
+    /** Quantity the customer's unit price refers to (e.g. 100 = price per 100 units) */
+    priceUnit          : Integer default 1;
+
+    /** Item-level requested delivery date; null = use the order's requestedDeliveryDate */
+    requestedDeliveryDate : Date;
 
     /** Derived from MaterialMappings / UomMappings only - never typed in freely */
     material           : String(40);
