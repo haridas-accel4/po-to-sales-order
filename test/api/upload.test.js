@@ -157,12 +157,24 @@ describe('uploadPurchaseOrder API', () => {
         assert.equal(re.data.status, 'FAILED');
     });
 
-    test('PDF -> stored, FAILED with actionable "not configured" message', async () => {
+    test('PDF in the PO template -> VALIDATED, mappings applied', async () => {
+        const { data } = await upload({ fileName: 'po.pdf', mimeType: 'application/pdf', content: b64('sample-po-template.pdf'), customerId: 'ACME' });
+        assert.equal(data.status, 'VALIDATED', data.errorMessage);
+        const o = await order(data.ID);
+        assert.equal(o.extractionMethod, 'PDF_TEMPLATE_V1');
+        assert.equal(Number(o.extractionConfidence), 1);
+        assert.equal(o.customerPoNumber, 'PO-2027-0201');
+        assert.equal(o.requestedDeliveryDate, '2027-04-20');
+        assert.deepEqual(o.items.map((i) => [i.lineNumber, i.material, i.sapUom, Number(i.quantity)]),
+            [[10, 'TG11', 'PC', 100], [20, 'TG12', 'PC', 100], [30, 'TG13', 'KG', 2.5]]);
+    });
+
+    test('unreadable PDF -> stored, FAILED with the reason', async () => {
         const { data } = await upload({ fileName: 'po.pdf', mimeType: 'application/pdf', content: b64('sample-po.pdf'), customerId: 'ACME' });
         assert.equal(data.status, 'FAILED');
-        assert.match(data.errorMessage, /PDF extraction is not configured/);
+        assert.match(data.errorMessage, /PDF file could not be (opened|read)/);
         const o = await order(data.ID);
-        assert.equal(o.issues[0].code, 'EXTRACTION_NOT_CONFIGURED');
+        assert.equal(o.issues[0].code, 'INVALID_PDF');
         assert.ok(o.file_ID);
     });
 

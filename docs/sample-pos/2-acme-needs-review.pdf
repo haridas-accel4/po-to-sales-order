@@ -1,0 +1,64 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Length 1386 >>
+stream
+BT /F1 16 Tf 50 800 Td (PURCHASE ORDER) Tj ET
+BT /F1 10 Tf 50 770 Td (Customer PO:) Tj ET
+BT /F1 10 Tf 160 770 Td (ACME-PDF-1002) Tj ET
+BT /F1 10 Tf 50 754 Td (PO Date:) Tj ET
+BT /F1 10 Tf 160 754 Td (2026-11-26) Tj ET
+BT /F1 10 Tf 50 724 Td (Line) Tj ET
+BT /F1 10 Tf 85 724 Td (Customer Material) Tj ET
+BT /F1 10 Tf 200 724 Td (Description) Tj ET
+BT /F1 10 Tf 380 724 Td (Quantity) Tj ET
+BT /F1 10 Tf 440 724 Td (UoM) Tj ET
+BT /F1 10 Tf 490 724 Td (Unit Price) Tj ET
+BT /F1 10 Tf 50 706 Td (10) Tj ET
+BT /F1 10 Tf 85 706 Td (ACME-BOLT-10) Tj ET
+BT /F1 10 Tf 200 706 Td (Hex bolt M10) Tj ET
+BT /F1 10 Tf 380 706 Td (200) Tj ET
+BT /F1 10 Tf 440 706 Td (PCS) Tj ET
+BT /F1 10 Tf 490 706 Td (0.25) Tj ET
+BT /F1 10 Tf 50 691 Td (20) Tj ET
+BT /F1 10 Tf 85 691 Td (ACME-SCREW-8) Tj ET
+BT /F1 10 Tf 200 691 Td (Wood screw M8) Tj ET
+BT /F1 10 Tf 380 691 Td (300) Tj ET
+BT /F1 10 Tf 440 691 Td (PCS) Tj ET
+BT /F1 10 Tf 490 691 Td (0.08) Tj ET
+BT /F1 10 Tf 50 676 Td (30) Tj ET
+BT /F1 10 Tf 85 676 Td (ACME-NUT-10) Tj ET
+BT /F1 10 Tf 200 676 Td (Hex nut M10) Tj ET
+BT /F1 10 Tf 380 676 Td (4) Tj ET
+BT /F1 10 Tf 440 676 Td (CARTON) Tj ET
+BT /F1 10 Tf 490 676 Td (15.00) Tj ET
+BT /F1 12 Tf 380 800 Td (ACME Industries Ltd.) Tj ET
+BT /F1 9 Tf 380 785 Td (12 Industrial Park Road) Tj ET
+BT /F1 9 Tf 380 773 Td (Pune 411019, India) Tj ET
+BT /F1 8 Tf 50 40 Td (ACME Industries Ltd. - Page 1 of 1) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000212 00000 n 
+0000001650 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1776
+%%EOF
