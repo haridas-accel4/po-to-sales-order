@@ -17,6 +17,12 @@ describe('CSV extraction', () => {
         assert.deepEqual(po.extraction, { method: 'CSV_TEMPLATE_V1', confidence: 1 });
     });
 
+    test('strips invisible characters from text values', () => {
+        const po = extractCsv(csv(`${HEADER}\nPO-1\u200B,2027-01-15,,10,UP-FAN-AFO-001\u200B,\u200B,2,EA\u00AD,`));
+        assert.equal(po.header.customerPoNumber, 'PO-1');
+        assert.deepEqual([po.items[0].customerMaterial, po.items[0].description, po.items[0].uom], ['UP-FAN-AFO-001', null, 'EA']);
+    });
+
     test('supports semicolon delimiter, DD.MM.YYYY dates, quoted values and empty price', () => {
         const po = extractCsv(fixture('sample-po-semicolon.csv'));
         assert.equal(po.header.poDate, '2027-01-15');

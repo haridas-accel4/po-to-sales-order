@@ -44,6 +44,9 @@ describe('uploadPurchaseOrder API', () => {
         assert.deepEqual(o.items.map((i) => [i.lineNumber, i.material, i.sapUom, Number(i.quantity)]),
             [[10, 'TG11', 'PC', 100], [20, 'TG12', 'PC', 100], [30, 'TG13', 'KG', 2.5]]);
         assert.equal(Number(o.items[0].customerUnitPrice), 0.25);
+        // not part of the CSV template: defaults
+        assert.equal(o.currency, null);
+        assert.deepEqual(o.items.map((i) => [i.priceUnit, i.requestedDeliveryDate]), [[1, null], [1, null], [1, null]]);
         assert.deepEqual(o.events.map((e) => e.status), ['RECEIVED', 'EXTRACTED', 'VALIDATED']);
 
         // original file is preserved byte-for-byte

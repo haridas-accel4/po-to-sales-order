@@ -1,12 +1,13 @@
 import cds from '@sap/cds';
 import { issue } from './validation.js';
+import { cleanText } from './text.js';
 
 /**
  * Master-data mapping. Lookups only use the maintained mapping tables;
  * nothing is guessed. Unknown values produce ERROR issues (-> NEEDS_REVIEW).
  */
 
-const key = (s) => String(s ?? '').trim().toUpperCase();
+const key = (s) => cleanText(s).toUpperCase();
 const isActive = (row) => row.active !== false;
 
 /**

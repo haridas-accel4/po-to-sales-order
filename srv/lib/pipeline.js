@@ -110,7 +110,7 @@ export async function processInboundOrder(orderId, { buffer, fileType } = {}) {
             issue('ERROR', e.code, d.message, { field: d.field ?? null, lineNumber: d.rowNumber ?? null })));
         await setStatus(orderId, 'FAILED', e.message, {
             errorMessage: e.message, extractionMethod: null, extractionConfidence: null,
-            customerPoNumber: null, poDate: null, requestedDeliveryDate: null, soldToParty: null,
+            customerPoNumber: null, poDate: null, requestedDeliveryDate: null, currency: null, soldToParty: null,
         });
         LOG.warn(`Inbound order ${orderId} extraction failed (${e.code}): ${e.message}`);
         return summarize(orderId);
@@ -120,6 +120,7 @@ export async function processInboundOrder(orderId, { buffer, fileType } = {}) {
         customerPoNumber: po.header.customerPoNumber,
         poDate: po.header.poDate,
         requestedDeliveryDate: po.header.requestedDeliveryDate,
+        currency: po.header.currency ?? null,
         extractionMethod: po.extraction.method,
         extractionConfidence: po.extraction.confidence,
         errorMessage: null,
@@ -132,6 +133,8 @@ export async function processInboundOrder(orderId, { buffer, fileType } = {}) {
         quantity: it.quantity,
         customerUom: it.uom,
         customerUnitPrice: it.unitPrice, // informational only - never used as SAP price
+        priceUnit: it.priceUnit ?? 1,
+        requestedDeliveryDate: it.requestedDeliveryDate ?? null,
     })));
     await setStatus(orderId, 'EXTRACTED', `${po.items.length} item(s) extracted via ${po.extraction.method}`);
 

@@ -50,6 +50,21 @@ describe('Validation rules', () => {
         assert.equal(issues[0].lineNumber, 20);
     });
 
+    test('material mapping ignores invisible characters (e.g. zero-width space from S/4 exports)', () => {
+        const { items, issues } = mapItems([item({ customerMaterial: 'UP-FAN-AFO-001\u200B', customerUom: '\uFEFFPCS' })],
+            new Map([['UP-FAN-AFO-001', 'TG11']]), new Map([['PCS', 'PC']]));
+        assert.deepEqual(items.map((i) => [i.material, i.sapUom]), [['TG11', 'PC']]);
+        assert.deepEqual(issues, []);
+    });
+
+    test('item delivery date and price unit', () => {
+        assert.deepEqual(validateRequiredFields(header, [item({ requestedDeliveryDate: '2027-01-01', priceUnit: 100 })]), []);
+        assert.deepEqual(validateRequiredFields(header, [item({ requestedDeliveryDate: null, priceUnit: null })]), []);
+        const issues = validateRequiredFields(header, [item({ requestedDeliveryDate: '2026-12-31' }), item({ lineNumber: 20, priceUnit: 0 }), item({ lineNumber: 30, priceUnit: 1.5 })]);
+        assert.deepEqual(codes(issues), ['ERROR:INVALID_DELIVERY_DATE', 'ERROR:INVALID_PRICE_UNIT', 'ERROR:INVALID_PRICE_UNIT']);
+        assert.deepEqual(issues.map((i) => i.lineNumber), [10, 20, 30]);
+    });
+
     test('material mapping errors are suppressed when the customer is unknown', () => {
         const { issues } = mapItems([item()], new Map(), new Map([['PCS', 'PC']]), { customerKnown: false });
         assert.deepEqual(issues, []);
