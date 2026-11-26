@@ -36,6 +36,13 @@ export function validateRequiredFields(header, items) {
         } else seen.add(lineNumber);
         if (!it.customerMaterial) issues.push(issue('ERROR', 'REQUIRED_FIELD', 'Customer material is missing.', { field: 'customerMaterial', lineNumber }));
         if (!it.customerUom) issues.push(issue('ERROR', 'REQUIRED_FIELD', 'Unit of measure is missing.', { field: 'customerUom', lineNumber }));
+        if (it.requestedDeliveryDate && header?.poDate && it.requestedDeliveryDate < header.poDate) {
+            issues.push(issue('ERROR', 'INVALID_DELIVERY_DATE',
+                `Requested delivery date ${it.requestedDeliveryDate} is before the PO date ${header.poDate}.`, { field: 'requestedDeliveryDate', lineNumber }));
+        }
+        if (it.priceUnit !== null && it.priceUnit !== undefined && !(Number.isInteger(Number(it.priceUnit)) && Number(it.priceUnit) > 0)) {
+            issues.push(issue('ERROR', 'INVALID_PRICE_UNIT', `Price unit must be a positive whole number (got ${it.priceUnit}).`, { field: 'priceUnit', lineNumber }));
+        }
     }
     return issues;
 }

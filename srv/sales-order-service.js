@@ -95,6 +95,12 @@ export default class SalesOrderService extends cds.ApplicationService {
             req._po2soParent = parentId;
         });
 
+        this.before(['CREATE', 'UPDATE'], InboundItems, (req) => {
+            for (const { field, message } of invalidDates(req.data, ['requestedDeliveryDate'])) {
+                req.error({ status: 400, code: 'INVALID_DATE', message, target: field });
+            }
+        });
+
         // Any correction re-runs mapping + validation so the status never goes stale.
         this.after('UPDATE', InboundOrders, async (_, req) => {
             const ID = req.data.ID ?? req.params[0]?.ID ?? req.params[0];

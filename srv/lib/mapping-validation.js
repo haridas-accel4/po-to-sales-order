@@ -6,6 +6,7 @@
  * materials case-insensitively and trimmed, so keys that differ only in case or
  * surrounding blanks would make mapping ambiguous. They are treated as conflicts.
  */
+import { cleanText } from './text.js';
 
 export const MAPPING_RULES = {
     Customers: {
@@ -43,12 +44,12 @@ const FIELD_LABELS = {
 
 export const fieldLabel = (field) => FIELD_LABELS[field] ?? field;
 
-const isBlank = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+const isBlank = (v) => v === null || v === undefined || (typeof v === 'string' && cleanText(v) === '');
 
-/** Trim the text fields present in the payload (in place). */
+/** Trim the text fields present in the payload and strip invisible characters (in place). */
 export function trimTextFields(data, fields) {
     for (const f of fields) {
-        if (typeof data?.[f] === 'string') data[f] = data[f].trim();
+        if (typeof data?.[f] === 'string') data[f] = cleanText(data[f]);
     }
     return data;
 }
@@ -69,7 +70,7 @@ export function missingRequired(data, required, { full }) {
 
 /** Key comparison as performed by the intake pipeline. */
 export function sameKey(a, b, caseInsensitive) {
-    const n = (v) => String(v ?? '').trim();
+    const n = (v) => cleanText(v);
     return caseInsensitive ? n(a).toUpperCase() === n(b).toUpperCase() : n(a) === n(b);
 }
 
