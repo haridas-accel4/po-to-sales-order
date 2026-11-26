@@ -330,8 +330,8 @@
                                 <ScrollContainer
                                     horizontal="true"
                                     vertical="true"
-                                    height="32rem"
-                                    width="100%">
+                                    width="100%"
+                                    class="po2soTableScroll">
                                 <Table
                                     id="poTable"
                                     class="sapUiSizeCompact"
