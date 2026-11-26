@@ -1,0 +1,68 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Length 1575 >>
+stream
+BT /F1 16 Tf 50 800 Td (PURCHASE ORDER) Tj ET
+BT /F1 10 Tf 50 770 Td (Customer PO:) Tj ET
+BT /F1 10 Tf 160 770 Td (ACME-PDF-1001) Tj ET
+BT /F1 10 Tf 50 754 Td (PO Date:) Tj ET
+BT /F1 10 Tf 160 754 Td (2026-11-26) Tj ET
+BT /F1 10 Tf 50 738 Td (Delivery Date:) Tj ET
+BT /F1 10 Tf 160 738 Td (2026-12-10) Tj ET
+BT /F1 10 Tf 50 708 Td (Line) Tj ET
+BT /F1 10 Tf 85 708 Td (Customer Material) Tj ET
+BT /F1 10 Tf 200 708 Td (Description) Tj ET
+BT /F1 10 Tf 380 708 Td (Quantity) Tj ET
+BT /F1 10 Tf 440 708 Td (UoM) Tj ET
+BT /F1 10 Tf 490 708 Td (Unit Price) Tj ET
+BT /F1 10 Tf 50 690 Td (10) Tj ET
+BT /F1 10 Tf 85 690 Td (ACME-BOLT-10) Tj ET
+BT /F1 10 Tf 200 690 Td (Hex bolt M10) Tj ET
+BT /F1 10 Tf 380 690 Td (500) Tj ET
+BT /F1 10 Tf 440 690 Td (PCS) Tj ET
+BT /F1 10 Tf 490 690 Td (0.25) Tj ET
+BT /F1 10 Tf 50 675 Td (20) Tj ET
+BT /F1 10 Tf 85 675 Td (ACME-NUT-10) Tj ET
+BT /F1 10 Tf 200 675 Td (Hex nut M10) Tj ET
+BT /F1 10 Tf 380 675 Td (500) Tj ET
+BT /F1 10 Tf 440 675 Td (PCS) Tj ET
+BT /F1 10 Tf 490 675 Td (0.10) Tj ET
+BT /F1 10 Tf 50 660 Td (30) Tj ET
+BT /F1 10 Tf 85 660 Td (ACME-WASH-10) Tj ET
+BT /F1 10 Tf 200 660 Td (Washer M10) Tj ET
+BT /F1 10 Tf 380 660 Td (5) Tj ET
+BT /F1 10 Tf 440 660 Td (KG) Tj ET
+BT /F1 10 Tf 490 660 Td (12.00) Tj ET
+BT /F1 10 Tf 50 625 Td (Total: 235.00 INR) Tj ET
+BT /F1 10 Tf 50 610 Td (Payment terms: 30 days net) Tj ET
+BT /F1 12 Tf 380 800 Td (ACME Industries Ltd.) Tj ET
+BT /F1 9 Tf 380 785 Td (12 Industrial Park Road) Tj ET
+BT /F1 9 Tf 380 773 Td (Pune 411019, India) Tj ET
+BT /F1 8 Tf 50 40 Td (ACME Industries Ltd. - Page 1 of 1) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000212 00000 n 
+0000001839 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1965
+%%EOF

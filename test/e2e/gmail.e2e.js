@@ -152,6 +152,9 @@ describe('Gmail intake in the browser', { skip: !executablePath && 'no Chrome/Ed
         fs.writeFileSync(file, csv('PO-E2E-MANUAL'));
         await page.locator(`${byId('poFileUploader')} input[type=file]`).setInputFiles(file);
         await page.locator(byId('uploadButton')).click();
+        // no customer selected -> warning, upload only after confirming
+        const warning = page.getByRole('alertdialog').filter({ hasText: 'No customer is selected' });
+        await warning.getByRole('button', { name: 'Upload Anyway' }).click();
         await page.waitForFunction((id) => sap.ui.require('sap/ui/core/Element').getElementById(id).getVisible(), P + 'uploadResult');
         await page.locator('.sapMITBFilter', { hasText: 'Processed POs' }).first().click();
         await page.waitForFunction(() => document.querySelector('[id$="--poTable"]')?.innerText.includes('PO-E2E-MANUAL'));

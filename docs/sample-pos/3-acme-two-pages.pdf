@@ -1,0 +1,137 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Length 2626 >>
+stream
+BT /F1 16 Tf 50 800 Td (PURCHASE ORDER) Tj ET
+BT /F1 10 Tf 50 770 Td (PO Number:) Tj ET
+BT /F1 10 Tf 160 770 Td (ACME-PDF-1003) Tj ET
+BT /F1 10 Tf 50 754 Td (Order Date:) Tj ET
+BT /F1 10 Tf 160 754 Td (26.11.2026) Tj ET
+BT /F1 10 Tf 50 738 Td (Delivery Date:) Tj ET
+BT /F1 10 Tf 160 738 Td (15.12.2026) Tj ET
+BT /F1 10 Tf 50 708 Td (Line) Tj ET
+BT /F1 10 Tf 85 708 Td (Customer Material) Tj ET
+BT /F1 10 Tf 200 708 Td (Description) Tj ET
+BT /F1 10 Tf 380 708 Td (Quantity) Tj ET
+BT /F1 10 Tf 440 708 Td (UoM) Tj ET
+BT /F1 10 Tf 490 708 Td (Unit Price) Tj ET
+BT /F1 10 Tf 50 690 Td (10) Tj ET
+BT /F1 10 Tf 85 690 Td (ACME-BOLT-10) Tj ET
+BT /F1 10 Tf 200 690 Td (Hex bolt M10) Tj ET
+BT /F1 10 Tf 380 690 Td (100) Tj ET
+BT /F1 10 Tf 440 690 Td (PCS) Tj ET
+BT /F1 10 Tf 490 690 Td (0.25) Tj ET
+BT /F1 10 Tf 50 675 Td (20) Tj ET
+BT /F1 10 Tf 85 675 Td (ACME-NUT-10) Tj ET
+BT /F1 10 Tf 200 675 Td (Hex nut M10) Tj ET
+BT /F1 10 Tf 380 675 Td (200) Tj ET
+BT /F1 10 Tf 440 675 Td (PCS) Tj ET
+BT /F1 10 Tf 490 675 Td (0.10) Tj ET
+BT /F1 10 Tf 50 660 Td (30) Tj ET
+BT /F1 10 Tf 85 660 Td (ACME-WASH-10) Tj ET
+BT /F1 10 Tf 200 660 Td (Washer M10) Tj ET
+BT /F1 10 Tf 380 660 Td (1.5) Tj ET
+BT /F1 10 Tf 440 660 Td (KG) Tj ET
+BT /F1 10 Tf 490 660 Td (12.00) Tj ET
+BT /F1 10 Tf 50 645 Td (40) Tj ET
+BT /F1 10 Tf 85 645 Td (ACME-BOLT-10) Tj ET
+BT /F1 10 Tf 200 645 Td (Hex bolt M10) Tj ET
+BT /F1 10 Tf 380 645 Td (400) Tj ET
+BT /F1 10 Tf 440 645 Td (PCS) Tj ET
+BT /F1 10 Tf 490 645 Td (0.25) Tj ET
+BT /F1 10 Tf 50 630 Td (50) Tj ET
+BT /F1 10 Tf 85 630 Td (ACME-NUT-10) Tj ET
+BT /F1 10 Tf 200 630 Td (Hex nut M10) Tj ET
+BT /F1 10 Tf 380 630 Td (500) Tj ET
+BT /F1 10 Tf 440 630 Td (PCS) Tj ET
+BT /F1 10 Tf 490 630 Td (0.10) Tj ET
+BT /F1 10 Tf 50 615 Td (60) Tj ET
+BT /F1 10 Tf 85 615 Td (ACME-WASH-10) Tj ET
+BT /F1 10 Tf 200 615 Td (Washer M10) Tj ET
+BT /F1 10 Tf 380 615 Td (2.25) Tj ET
+BT /F1 10 Tf 440 615 Td (KG) Tj ET
+BT /F1 10 Tf 490 615 Td (12.00) Tj ET
+BT /F1 10 Tf 50 600 Td (70) Tj ET
+BT /F1 10 Tf 85 600 Td (ACME-BOLT-10) Tj ET
+BT /F1 10 Tf 200 600 Td (Hex bolt M10) Tj ET
+BT /F1 10 Tf 380 600 Td (700) Tj ET
+BT /F1 10 Tf 440 600 Td (PCS) Tj ET
+BT /F1 10 Tf 490 600 Td (0.25) Tj ET
+BT /F1 10 Tf 50 585 Td (80) Tj ET
+BT /F1 10 Tf 85 585 Td (ACME-NUT-10) Tj ET
+BT /F1 10 Tf 200 585 Td (Hex nut M10) Tj ET
+BT /F1 10 Tf 380 585 Td (800) Tj ET
+BT /F1 10 Tf 440 585 Td (PCS) Tj ET
+BT /F1 10 Tf 490 585 Td (0.10) Tj ET
+BT /F1 12 Tf 380 800 Td (ACME Industries Ltd.) Tj ET
+BT /F1 9 Tf 380 785 Td (12 Industrial Park Road) Tj ET
+BT /F1 9 Tf 380 773 Td (Pune 411019, India) Tj ET
+BT /F1 8 Tf 50 40 Td (ACME Industries Ltd. - Page 1 of 2) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 1238 >>
+stream
+BT /F1 10 Tf 50 800 Td (Line) Tj ET
+BT /F1 10 Tf 85 800 Td (Customer Material) Tj ET
+BT /F1 10 Tf 200 800 Td (Description) Tj ET
+BT /F1 10 Tf 380 800 Td (Quantity) Tj ET
+BT /F1 10 Tf 440 800 Td (UoM) Tj ET
+BT /F1 10 Tf 490 800 Td (Unit Price) Tj ET
+BT /F1 10 Tf 50 782 Td (90) Tj ET
+BT /F1 10 Tf 85 782 Td (ACME-WASH-10) Tj ET
+BT /F1 10 Tf 200 782 Td (Washer M10) Tj ET
+BT /F1 10 Tf 380 782 Td (3) Tj ET
+BT /F1 10 Tf 440 782 Td (KG) Tj ET
+BT /F1 10 Tf 490 782 Td (12.00) Tj ET
+BT /F1 10 Tf 50 767 Td (100) Tj ET
+BT /F1 10 Tf 85 767 Td (ACME-BOLT-10) Tj ET
+BT /F1 10 Tf 200 767 Td (Hex bolt M10) Tj ET
+BT /F1 10 Tf 380 767 Td (1000) Tj ET
+BT /F1 10 Tf 440 767 Td (PCS) Tj ET
+BT /F1 10 Tf 490 767 Td (0.25) Tj ET
+BT /F1 10 Tf 50 752 Td (110) Tj ET
+BT /F1 10 Tf 85 752 Td (ACME-NUT-10) Tj ET
+BT /F1 10 Tf 200 752 Td (Hex nut M10) Tj ET
+BT /F1 10 Tf 380 752 Td (1100) Tj ET
+BT /F1 10 Tf 440 752 Td (PCS) Tj ET
+BT /F1 10 Tf 490 752 Td (0.10) Tj ET
+BT /F1 10 Tf 50 737 Td (120) Tj ET
+BT /F1 10 Tf 85 737 Td (ACME-WASH-10) Tj ET
+BT /F1 10 Tf 200 737 Td (Washer M10) Tj ET
+BT /F1 10 Tf 380 737 Td (3.75) Tj ET
+BT /F1 10 Tf 440 737 Td (KG) Tj ET
+BT /F1 10 Tf 490 737 Td (12.00) Tj ET
+BT /F1 8 Tf 50 40 Td (ACME Industries Ltd. - Page 2 of 2) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000218 00000 n 
+0000002896 00000 n 
+0000003022 00000 n 
+0000004312 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+4438
+%%EOF

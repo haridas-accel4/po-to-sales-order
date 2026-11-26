@@ -809,7 +809,32 @@ sap.ui.define([
             this.getView().getModel("upload").setProperty("/canUpload", !!this._selectedFile && !this._uploading);
         },
 
-        onUpload: async function () {
+        onUpload: function () {
+            if (!this._selectedFile || this._uploading) {
+                return;
+            }
+            if (this.getView().getModel("upload").getProperty("/customerId")) {
+                this._uploadFile();
+                return;
+            }
+            // without a customer the materials cannot be mapped: the PO waits in Exceptions
+            const uploadAnyway = "Upload Anyway";
+            MessageBox.warning("No customer is selected. Customer materials can only be mapped for a known customer, " +
+                "so this purchase order will wait in Exceptions until a customer is set there.", {
+                title: "No Customer Selected",
+                actions: [uploadAnyway, MessageBox.Action.CANCEL],
+                emphasizedAction: MessageBox.Action.CANCEL,
+                onClose: function (action) {
+                    if (action === uploadAnyway) {
+                        this._uploadFile();
+                    } else {
+                        this.byId("uploadCustomer").focus();
+                    }
+                }.bind(this)
+            });
+        },
+
+        _uploadFile: async function () {
             const file = this._selectedFile;
             if (!file || this._uploading) {
                 return;
