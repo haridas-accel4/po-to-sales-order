@@ -5,7 +5,8 @@
   "dependencies": {
     "@sap/cds": "^10",
     "csv-parse": "^7.0.3",
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "googleapis": "^190.0.0"
   },
   "devDependencies": {
     "@cap-js/cds-test": "^1.0.2",
@@ -19,13 +20,30 @@
     "test": "node --test \"test/**/*.test.js\"",
     "test:unit": "node --test \"test/unit/*.test.js\"",
     "test:api": "node --test \"test/api/*.test.js\"",
-    "test:e2e": "node --test --test-concurrency=1 \"test/e2e/*.e2e.js\""
+    "test:e2e": "node --test --test-concurrency=1 \"test/e2e/*.e2e.js\"",
+    "db:migrate": "node scripts/db-migrate.js"
   },
   "private": true,
   "cds": {
     "po2so": {
       "autoPost": true,
-      "salesOrderType": "OR"
+      "salesOrderType": "OR",
+      "gmail": {
+        "keywords": [
+          "Purchase Order",
+          "PO",
+          "Sales Order",
+          "SO"
+        ],
+        "attachmentExtensions": [
+          "pdf",
+          "xlsx",
+          "csv"
+        ],
+        "overlapMinutes": 10,
+        "maxMessagesPerPoll": 50,
+        "maxAttempts": 5
+      }
     },
     "requires": {
       "API_SALES_ORDER_SRV": {

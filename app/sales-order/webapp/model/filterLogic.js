@@ -17,7 +17,7 @@ sap.ui.define([], function () {
     };
 
     /** Fields searched by the free-text search. */
-    const SEARCH_FIELDS = ["poNumber", "fileName", "customer", "customerId", "soldToParty"];
+    const SEARCH_FIELDS = ["poNumber", "fileName", "customer", "customerId", "soldToParty", "sourceText"];
 
     /** Initial / cleared state of the filter bar, including the search text. */
     function emptyFilters() {

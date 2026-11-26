@@ -21,6 +21,12 @@
                     <ToolbarSeparator/>
                     <Title text="PO to Sales Order Automation" level="H3"/>
                     <ToolbarSpacer/>
+                    <Button id="gmailButton"
+                        text="Gmail"
+                        icon="sap-icon://email"
+                        type="Transparent"
+                        tooltip="Gmail intake: connection, automatic polling and Check Gmail Now"
+                        press=".onOpenGmail"/>
                     <Button id="manageMappingsButton"
                         text="Manage Mappings"
                         icon="sap-icon://chain-link"
@@ -316,6 +322,7 @@
                                         <Column width="12rem"><Text text="Purchase Order"/></Column>
                                         <Column width="10rem"><Text text="PO Date"/></Column>
                                         <Column width="8rem"><Text text="File Type"/></Column>
+                                        <Column width="9rem"><Text text="Source"/></Column>
                                         <Column width="10rem"><Text text="Status"/></Column>
                                         <Column width="12rem"><Text text="Sales Order"/></Column>
                                         <Column width="12rem"><Text text="Created On"/></Column>
@@ -329,6 +336,10 @@
                                                 <Text text="{records>poNumber}"/>
                                                 <Text text="{records>poDate}"/>
                                                 <Text text="{records>fileType}"/>
+                                                <ObjectStatus
+                                                    text="{records>sourceText}"
+                                                    icon="{= ${records>source} === 'EMAIL' ? 'sap-icon://email' : 'sap-icon://upload' }"
+                                                    tooltip="{records>sourceTooltip}"/>
                                                 <ObjectStatus
                                                     text="{records>statusText}"
                                                     state="{records>statusState}"

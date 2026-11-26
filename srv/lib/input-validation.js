@@ -12,7 +12,7 @@ export const ORDER_DATE_FIELDS = ['poDate', 'requestedDeliveryDate'];
  * dropping them). Requests containing them are rejected explicitly so a client
  * never assumes such a change succeeded.
  */
-export const PROTECTED_ORDER_FIELDS = ['file', 'file_ID', 'events', 'issues'];
+export const PROTECTED_ORDER_FIELDS = ['file', 'file_ID', 'events', 'issues', 'emailAttachment'];
 export const PROTECTED_ITEM_FIELDS = ['parent', 'parent_ID'];
 
 /**

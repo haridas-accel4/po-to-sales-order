@@ -4,6 +4,7 @@ import { decodeBase64 } from './lib/file-validation.js';
 import { invalidDates, protectedFieldsIn, PROTECTED_ORDER_FIELDS, PROTECTED_ITEM_FIELDS } from './lib/input-validation.js';
 import { ingestDocument, processInboundOrder, validateInboundOrder, postSalesOrder, FINAL_STATUSES } from './lib/pipeline.js';
 import { MAPPING_RULES, trimTextFields, missingRequired, sameKey, conflictMessage } from './lib/mapping-validation.js';
+import * as gmail from './lib/gmail/index.js';
 
 /** Orders that are no longer open for revalidation (REJECTED is reserved for exception closing). */
 const CLOSED_STATUSES = ['CREATED', 'REJECTED'];
@@ -106,8 +107,38 @@ export default class SalesOrderService extends cds.ApplicationService {
         });
 
         this._registerMappingHandlers();
+        this._registerGmailHandlers();
 
         return super.init();
+    }
+
+    // ---------------------------------------------------------------- Gmail intake
+
+    /** Gmail status / manual check / disconnect. OAuth itself runs on /auth/gmail (server.js). */
+    _registerGmailHandlers() {
+        this.on('gmailStatus', () => gmail.getStatus());
+
+        this.on('checkGmailNow', async (req) => {
+            const { backfillDays } = req.data;
+            if (backfillDays !== null && backfillDays !== undefined && !(Number.isInteger(backfillDays) && backfillDays >= 1 && backfillDays <= 90)) {
+                return req.reject({ status: 400, code: 'INVALID_BACKFILL', target: 'backfillDays', message: 'backfillDays must be a whole number from 1 to 90.' });
+            }
+            // No database access in this request: the sync runs detached and commits
+            // each attachment in its own transaction.
+            if (!gmail.isConnected()) {
+                return req.reject({ status: 409, code: 'GMAIL_NOT_CONNECTED', message: 'Gmail is not connected. Connect a Gmail account first.' });
+            }
+            try {
+                return await gmail.runSync({ backfillDays: backfillDays ?? null });
+            } catch (e) {
+                return req.reject({ status: e.status ?? 502, code: e.code ?? 'GMAIL_SYNC_FAILED', message: e.message });
+            }
+        });
+
+        this.on('disconnectGmail', async () => {
+            await gmail.disconnect();
+            return gmail.getStatus();
+        });
     }
 
     // ---------------------------------------------------------------- mapping master data
