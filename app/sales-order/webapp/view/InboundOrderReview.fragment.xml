@@ -26,12 +26,40 @@
                         inverted="true"
                         class="sapUiSmallMarginBegin"/>
                     <ToolbarSpacer/>
+                    <Text id="reviewSource" text="Source: {review>/order/sourceText}"/>
+                    <ToolbarSeparator/>
                     <Link
                         text="{review>/order/fileName}"
                         href="{review>/order/fileUrl}"
                         target="_blank"
-                        tooltip="Download the original uploaded file"/>
+                        tooltip="Download the original file"/>
                 </OverflowToolbar>
+
+                <!-- Gmail origin (only for orders received by email) -->
+                <Panel
+                    id="reviewEmailPanel"
+                    visible="{= !!${review>/order/email} }"
+                    headerText="Received by Gmail"
+                    class="sapUiTinyMarginBottom">
+                    <HBox wrap="Wrap">
+                        <VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                            <Label text="From"/>
+                            <Text id="reviewEmailSender" text="{review>/order/email/sender}"/>
+                        </VBox>
+                        <VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                            <Label text="Subject"/>
+                            <Text id="reviewEmailSubject" text="{review>/order/email/subject}"/>
+                        </VBox>
+                        <VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                            <Label text="Attachment"/>
+                            <Text text="{review>/order/email/fileName}"/>
+                        </VBox>
+                        <VBox class="sapUiTinyMarginBottom">
+                            <Label text="Received"/>
+                            <Text text="{review>/order/email/receivedAt}"/>
+                        </VBox>
+                    </HBox>
+                </Panel>
 
                 <MessageStrip
                     visible="{= !${review>/editable} }"

@@ -20,3 +20,12 @@ File or Folder | Purpose
 ## Learn More
 
 Learn more at <https://cap.cloud.sap>.
+
+## Gmail Intake
+
+Customer purchase orders can be read directly from a Gmail mailbox (read-only). Matching email
+attachments (PDF, XLSX, CSV) run through the same intake pipeline as manual uploads.
+
+- Setup, configuration, polling and disconnecting: [docs/gmail-setup.md](docs/gmail-setup.md)
+- Local secrets go into `.env` (template: `.env.example`, never committed)
+- Existing database: `npm run db:migrate` (backup + additive changes only; `npm run deploy:local` re-creates all tables)

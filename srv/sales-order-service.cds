@@ -1,5 +1,6 @@
 using { po2so as db } from '../db/schema';
 using from '../db/inbound-schema';
+using from '../db/email-schema';
 
 // Base64 uploads: 5 MB file limit (cds.po2so.maxFileSize) => ~6.7 MB request body
 @cds.server.body_parser.limit: '10mb'
@@ -20,7 +21,7 @@ service SalesOrderService {
     // ---------------------------------------------------------------
 
     /**
-     * Inbound POs. Created only via uploadPurchaseOrder (or future e-mail intake).
+     * Inbound POs. Created only via uploadPurchaseOrder or the Gmail intake.
      * Reviewers may correct extracted header fields / items, then call revalidate().
      */
     @Capabilities.InsertRestrictions.Insertable: false
@@ -40,6 +41,8 @@ service SalesOrderService {
         @readonly file,
         @readonly issues,
         @readonly events,
+        // Gmail origin (sender, subject, attachment) - null for manual uploads
+        @readonly emailAttachment,
     } actions {
         /** Re-run mapping + validation on the current (possibly corrected) data. */
         action revalidate() returns InboundOrders;
@@ -117,4 +120,62 @@ service SalesOrderService {
         content    : LargeString not null,   // Base64
         customerId : String(20)              // optional customer identifier (Customers.customerId)
     ) returns UploadResult;
+
+    // ---------------------------------------------------------------
+    // Gmail intake (OAuth: GET /auth/gmail/connect and /auth/gmail/callback, see server.js)
+    // ---------------------------------------------------------------
+
+    /** Processing history of Gmail messages / attachments (no OAuth data). */
+    @readonly entity EmailMessages    as projection on db.EmailMessages;
+    @readonly entity EmailAttachments as projection on db.EmailAttachments;
+
+    type GmailStatus {
+        /** OAuth client configured (GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET set) */
+        configured           : Boolean;
+        connected            : Boolean;
+        emailAddress         : String(320);
+        autoPollEnabled      : Boolean;
+        pollIntervalMinutes  : Integer;
+        /** A sync is running right now */
+        polling              : Boolean;
+        nextPollAt           : Timestamp;
+        connectedAt          : Timestamp;
+        lastCheckedAt        : Timestamp;
+        lastSuccessAt        : Timestamp;
+        lastError            : String(1000);
+        emailsChecked        : Integer;
+        attachmentsProcessed : Integer;
+        /** Attachments that failed or were rejected by file validation */
+        attachmentsFailed    : Integer;
+        keywords             : String(500);
+    }
+
+    type GmailSyncResult {
+        startedAt            : Timestamp;
+        messagesChecked      : Integer;
+        messagesIgnored      : Integer;
+        messagesCompleted    : Integer;
+        messagesRetry        : Integer;
+        messagesFailed       : Integer;
+        attachmentsProcessed : Integer;
+        attachmentsRejected  : Integer;
+        attachmentsFailed    : Integer;
+        /** false if more messages are waiting (processed on the next poll) */
+        complete             : Boolean;
+        /** true if this call waited for a sync that was already running */
+        joined               : Boolean;
+        errors               : many String(1000);
+    }
+
+    /** Gmail connection and polling status. */
+    function gmailStatus() returns GmailStatus;
+
+    /**
+     * Poll Gmail now. Without backfillDays only mail received since the last poll
+     * (minus a small overlap) is read; backfillDays (1-90) explicitly imports older mail.
+     */
+    action checkGmailNow(backfillDays : Integer) returns GmailSyncResult;
+
+    /** Remove the stored Gmail credentials (processing history is kept). */
+    action disconnectGmail() returns GmailStatus;
 }

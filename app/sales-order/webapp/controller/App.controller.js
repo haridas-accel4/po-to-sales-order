@@ -10,7 +10,9 @@ sap.ui.define([
     "po2so/salesorder/model/reviewLogic",
     "po2so/salesorder/model/filterLogic",
     "po2so/salesorder/model/mappingLogic",
-    "po2so/salesorder/controller/MappingManager"
+    "po2so/salesorder/controller/MappingManager",
+    "po2so/salesorder/model/gmailLogic",
+    "po2so/salesorder/controller/GmailManager"
 ], function (
     Controller,
     JSONModel,
@@ -22,7 +24,9 @@ sap.ui.define([
     reviewLogic,
     filterLogic,
     mappingLogic,
-    MappingManager
+    MappingManager,
+    gmailLogic,
+    GmailManager
 ) {
     "use strict";
 
@@ -53,8 +57,11 @@ sap.ui.define([
 
     const ORDER_FIELDS = [
         "ID", "fileName", "mimeType", "customerId", "soldToParty", "customerPoNumber",
-        "poDate", "status", "salesOrderNumber", "errorMessage", "createdAt"
+        "poDate", "status", "salesOrderNumber", "errorMessage", "createdAt", "source"
     ].join(",");
+
+    // Gmail origin shown in the table tooltip and the review dialog
+    const EMAIL_EXPAND = "emailAttachment($select=fileName;$expand=message($select=sender,subject,receivedAt))";
 
     const poDateFormat = DateFormat.getDateInstance({ style: "medium", UTC: true });
     const createdAtFormat = DateFormat.getDateTimeInstance({ style: "medium" });
@@ -137,10 +144,17 @@ sap.ui.define([
                 onChanged: function () { this.loadRecords(); }.bind(this)
             });
 
+            // Gmail intake settings; new orders may arrive after "Check Gmail Now"
+            this._gmail = new GmailManager(this.getView(), this._serviceUrl, {
+                onChanged: function () { this.loadRecords(); }.bind(this)
+            });
+
             // official SAP logo shipped with the app (sap.com blocks hotlinking from browsers)
             this.byId("sapLogo").setSrc(sap.ui.require.toUrl("po2so/salesorder/img/sap-logo.svg"));
 
             this.loadRecords();
+            // back from the Gmail OAuth callback (?gmail=connected | error)
+            this._gmail.handleRedirect();
         },
 
         // ------------------------------------------------------------------ backend access
@@ -166,7 +180,7 @@ sap.ui.define([
             table.setBusy(true);
             try {
                 const [orders, customers] = await Promise.all([
-                    this._getAll("InboundOrders?$select=" + ORDER_FIELDS + "&$orderby=createdAt desc"),
+                    this._getAll("InboundOrders?$select=" + ORDER_FIELDS + "&$expand=" + EMAIL_EXPAND + "&$orderby=createdAt desc"),
                     this._getAll("Customers?$select=customerId,customerName,soldToParty,active&$orderby=customerName")
                 ]);
 
@@ -199,9 +213,14 @@ sap.ui.define([
                 customerText = order.customerId;
             }
 
+            const origin = gmailLogic.emailOrigin(order, function (iso) { return createdAtFormat.format(new Date(iso)); });
+
             return {
                 ID: order.ID,
                 fileName: order.fileName,
+                source: order.source || "UPLOAD",
+                sourceText: gmailLogic.sourceText(order.source || "UPLOAD"),
+                sourceTooltip: origin ? "From " + origin.sender + ": " + origin.subject : "Uploaded manually",
                 customer: customerText,
                 customerId: order.customerId || "",
                 soldToParty: order.soldToParty || "",
@@ -317,7 +336,7 @@ sap.ui.define([
         /** (Re)load the order with items and issues from the backend into the review model. */
         _loadReview: async function (orderId) {
             const response = await fetch(this._serviceUrl + "InboundOrders(" + orderId + ")" +
-                "?$expand=items($orderby=lineNumber),issues($orderby=lineNumber)",
+                "?$expand=items($orderby=lineNumber),issues($orderby=lineNumber)," + EMAIL_EXPAND,
             { headers: { Accept: "application/json" } });
             if (!response.ok) {
                 throw await readError(response);
@@ -360,6 +379,8 @@ sap.ui.define([
                     errorMessage: order.errorMessage || "",
                     soldToParty: order.soldToParty || "",
                     fileName: order.fileName,
+                    sourceText: gmailLogic.sourceText(order.source || "UPLOAD"),
+                    email: gmailLogic.emailOrigin(order, function (iso) { return createdAtFormat.format(new Date(iso)); }),
                     fileUrl: order.file_ID ? this._serviceUrl + "InboundFiles(" + order.file_ID + ")/content" : "",
                     extraction: (order.extractionMethod || "not extracted") + confidence
                 }),
@@ -590,6 +611,10 @@ sap.ui.define([
 
         onOpenMappings: function () {
             this._mappings.open();
+        },
+
+        onOpenGmail: function () {
+            this._gmail.open();
         },
 
         _announceStatus: function (prefix) {

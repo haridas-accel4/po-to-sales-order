@@ -1,0 +1,137 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form">
+
+    <Dialog
+        id="gmailDialog"
+        title="Gmail Intake"
+        contentWidth="36rem"
+        resizable="true"
+        draggable="true"
+        busyIndicatorDelay="0"
+        class="sapUiSizeCompact">
+
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <MessageStrip
+                    text="Emails with 'Purchase Order', 'PO', 'Sales Order' or 'SO' in the subject or body are read from Gmail. Each PDF, XLSX or CSV attachment is processed like a manual upload and appears in Processed POs or Exceptions. Gmail is accessed read-only: no email is sent, changed, moved or marked as read."
+                    type="Information"
+                    showIcon="true"
+                    class="sapUiTinyMarginBottom"/>
+
+                <MessageStrip
+                    visible="{= !${gmail>/view/configured} }"
+                    text="{gmail>/view/notConfiguredHint}"
+                    type="Warning"
+                    showIcon="true"
+                    class="sapUiTinyMarginBottom"/>
+
+                <MessageStrip
+                    visible="{= !!${gmail>/view/lastError} }"
+                    text="{gmail>/view/lastError}"
+                    type="Error"
+                    showIcon="true"
+                    class="sapUiTinyMarginBottom"/>
+
+                <form:SimpleForm
+                    id="gmailStatusForm"
+                    editable="false"
+                    layout="ResponsiveGridLayout"
+                    labelSpanXL="5" labelSpanL="5" labelSpanM="5" labelSpanS="12"
+                    columnsXL="1" columnsL="1" columnsM="1"
+                    singleContainerFullSize="false">
+                    <form:content>
+                        <core:Title text="Connection"/>
+                        <Label text="Status"/>
+                        <ObjectStatus
+                            id="gmailConnectionStatus"
+                            text="{gmail>/view/connectionText}"
+                            state="{gmail>/view/connectionState}"
+                            icon="{gmail>/view/connectionIcon}"/>
+                        <Label text="Gmail Address"/>
+                        <Text id="gmailAddress" text="{gmail>/view/emailAddress}"/>
+                        <Label text="Automatic Polling"/>
+                        <Text text="{gmail>/view/pollingText}"/>
+                        <Label text="Keywords"/>
+                        <Text text="{gmail>/view/keywords}"/>
+
+                        <core:Title text="Processing"/>
+                        <Label text="Last Checked"/>
+                        <Text id="gmailLastChecked" text="{gmail>/view/lastCheckedText}"/>
+                        <Label text="Last Successful Sync"/>
+                        <Text text="{gmail>/view/lastSuccessText}"/>
+                        <Label text="Emails Checked"/>
+                        <Text id="gmailEmailsChecked" text="{gmail>/view/emailsChecked}"/>
+                        <Label text="Attachments Processed"/>
+                        <Text id="gmailAttachmentsProcessed" text="{gmail>/view/attachmentsProcessed}"/>
+                        <Label text="Failed Attachments"/>
+                        <ObjectStatus
+                            text="{gmail>/view/attachmentsFailed}"
+                            state="{= ${gmail>/view/attachmentsFailed} > 0 ? 'Error' : 'None' }"
+                            tooltip="Attachments that could not be downloaded or were rejected by file validation (see list below)"/>
+                    </form:content>
+                </form:SimpleForm>
+
+                <Table
+                    id="gmailProblemsTable"
+                    visible="{= ${gmail>/problems}.length > 0 }"
+                    headerText="Attachments Not Processed (latest 10)"
+                    items="{ path: 'gmail>/problems', templateShareable: false }"
+                    class="sapUiSmallMarginTop">
+                    <columns>
+                        <Column width="11rem"><Text text="Attachment"/></Column>
+                        <Column width="6rem"><Text text="Status"/></Column>
+                        <Column><Text text="Reason"/></Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <ObjectIdentifier title="{gmail>fileName}" text="{gmail>sender}"/>
+                                <ObjectStatus text="{gmail>status}" state="{= ${gmail>status} === 'FAILED' ? 'Warning' : 'Error' }"/>
+                                <Text text="{gmail>errorMessage}"/>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </content>
+
+        <buttons>
+            <Button
+                id="gmailCheckButton"
+                text="Check Gmail Now"
+                type="Emphasized"
+                icon="sap-icon://synchronize"
+                enabled="{gmail>/view/canCheck}"
+                press=".onCheckNow"/>
+            <Button
+                id="gmailConnectButton"
+                text="Connect Gmail"
+                icon="sap-icon://connected"
+                visible="{= !${gmail>/view/connected} }"
+                enabled="{gmail>/view/canConnect}"
+                press=".onConnect"/>
+            <Button
+                id="gmailReconnectButton"
+                text="Reconnect"
+                icon="sap-icon://connected"
+                visible="{gmail>/view/canReconnect}"
+                tooltip="Sign in again, e.g. after the authorization expired"
+                press=".onConnect"/>
+            <Button
+                id="gmailDisconnectButton"
+                text="Disconnect"
+                icon="sap-icon://disconnected"
+                visible="{gmail>/view/canDisconnect}"
+                press=".onDisconnect"/>
+            <Button
+                icon="sap-icon://refresh"
+                tooltip="Refresh status"
+                press=".onRefreshStatus"/>
+            <Button
+                text="Close"
+                press=".onClose"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>
