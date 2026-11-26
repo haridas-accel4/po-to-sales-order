@@ -249,6 +249,13 @@
                 tooltip="Re-run mapping and validation, e.g. after maintaining mappings"
                 press=".onReviewRevalidate"/>
             <Button
+                id="reviewResubmitButton"
+                text="Resubmit to SAP"
+                icon="sap-icon://sales-order"
+                enabled="{review>/canRevalidate}"
+                tooltip="Re-run validation and, if the PO is valid, create the Sales Order in SAP"
+                press=".onReviewResubmit"/>
+            <Button
                 text="Close"
                 press=".onReviewClose"/>
         </buttons>

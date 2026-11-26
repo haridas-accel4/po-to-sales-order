@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test';
+import { describe, test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +6,9 @@ import cds from '@sap/cds';
 
 // Always use a fresh in-memory database for tests, never the persistent development db.sqlite
 const { GET, POST, PATCH, DELETE } = cds.test(fileURLToPath(new URL('../..', import.meta.url)), '--in-memory');
+// These tests cover intake, review and validation: keep orders open instead of posting them to SAP
+// (posting is covered in test/api/sales-order-posting.test.js).
+before(() => { cds.env.po2so.autoPost = false; });
 
 const SRV = '/odata/v4/sales-order';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';

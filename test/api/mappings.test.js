@@ -1,10 +1,13 @@
-import { describe, test } from 'node:test';
+import { describe, test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import cds from '@sap/cds';
 
 const { GET, POST, PATCH, PUT, DELETE } = cds.test(fileURLToPath(new URL('../..', import.meta.url)), '--in-memory');
+// These tests cover intake, review and validation: keep orders open instead of posting them to SAP
+// (posting is covered in test/api/sales-order-posting.test.js).
+before(() => { cds.env.po2so.autoPost = false; });
 
 const SRV = '/odata/v4/sales-order';
 const JSON_HDR = { 'content-type': 'application/json' };

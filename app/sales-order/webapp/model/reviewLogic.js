@@ -92,7 +92,11 @@ sap.ui.define([], function () {
     /** Whether the order can be corrected in the UI, and why not. */
     function reviewState(order) {
         if (order.status === "CREATED") {
-            return { editable: false, reason: "A Sales Order has been created for this PO; it can no longer be changed." };
+            return {
+                editable: false,
+                reason: (order.salesOrderNumber ? "Sales Order " + order.salesOrderNumber : "A Sales Order") +
+                    " has been created in SAP for this PO; it can no longer be changed."
+            };
         }
         if (!order.extractionMethod) {
             return {

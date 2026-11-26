@@ -244,7 +244,7 @@
                                         class="sapUiSmallMarginTop"/>
 
                                     <MessageStrip
-                                        text="Uploaded files will be extracted, validated and reviewed before Sales Order creation."
+                                        text="Uploaded POs are extracted and validated. Valid POs become Sales Orders in SAP immediately; POs with errors wait in Exceptions for review."
                                         type="Information"
                                         showIcon="true"
                                         class="sapUiSmallMarginTop"/>

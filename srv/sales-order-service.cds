@@ -45,6 +45,11 @@ service SalesOrderService {
         action revalidate() returns InboundOrders;
         /** Discard extracted data and re-extract from the stored original file. */
         action reprocess()  returns InboundOrders;
+        /**
+         * Fix and resubmit: re-run mapping + validation (including the duplicate check)
+         * and, if the order is VALIDATED, create the sales order in SAP.
+         */
+        action resubmit()   returns InboundOrders;
     };
 
     entity InboundItems as projection on db.InboundItems {
@@ -92,8 +97,10 @@ service SalesOrderService {
     action revalidateOpenOrders() returns RevalidationSummary;
 
     type UploadResult {
-        ID            : UUID;
-        status        : String(20);
+        ID               : UUID;
+        status           : String(20);
+        /** SAP sales order number, set when status is CREATED */
+        salesOrderNumber : String(10);
         errorMessage  : LargeString;
         errorCount    : Integer;
         warningCount  : Integer;
@@ -101,7 +108,8 @@ service SalesOrderService {
 
     /**
      * Upload a customer PO file (CSV, XLSX or PDF) as Base64.
-     * The original file is stored and the intake pipeline is run.
+     * The original file is stored and the intake pipeline is run; a VALIDATED order
+     * is posted to SAP immediately (cds.po2so.autoPost).
      */
     action uploadPurchaseOrder(
         fileName   : String(255) not null,

@@ -24,6 +24,9 @@ const BROWSERS = [
 const executablePath = BROWSERS.find((p) => existsSync(p));
 
 const app = cds.test(fileURLToPath(new URL('../..', import.meta.url)), '--in-memory');
+// These tests cover intake, review and validation: keep orders open instead of posting them to SAP
+// (posting is covered in test/api/sales-order-posting.test.js).
+before(() => { cds.env.po2so.autoPost = false; });
 const SRV = '/odata/v4/sales-order';
 const HEADER = 'CustomerPO,PODate,DeliveryDate,Line,CustomerMaterial,Description,Quantity,UoM,UnitPrice';
 const VIEW = 'container-po2so.salesorder---app';

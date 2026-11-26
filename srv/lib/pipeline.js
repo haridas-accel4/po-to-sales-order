@@ -5,6 +5,7 @@ import { validateFile } from './file-validation.js';
 import { extractPurchaseOrder } from './extraction/index.js';
 import { mapCustomer, loadMaterialMap, loadUomMap, mapItems } from './mapping.js';
 import { validateRequiredFields, validateQuantities, validateConfidence, determineStatus, issue } from './validation.js';
+import { connectSalesOrderApi, toSalesOrderPayload, findSalesOrder, createSalesOrder, describeSapError } from './sap-sales-order.js';
 
 /**
  * Inbound PO processing pipeline - the single path for every intake channel
@@ -14,9 +15,10 @@ import { validateRequiredFields, validateQuantities, validateConfidence, determi
  *   processInboundOrder()   extract (deterministic CSV/XLSX, PDF provider) -> EXTRACTED | FAILED
  *   validateInboundOrder()  customer / material / UoM mapping, field, quantity,
  *                           confidence and duplicate checks -> VALIDATED | NEEDS_REVIEW | FAILED
+ *   postSalesOrder()        duplicate check in SAP, create through the Sales Order API
+ *                           -> CREATED | FAILED (SAP rejected) | VALIDATED (SAP not reachable)
  *
- * The pipeline never creates Sales Orders. Only VALIDATED orders may be posted
- * in a later phase, by deterministic code - not by an LLM.
+ * Only VALIDATED orders are posted, by deterministic code - never by an LLM.
  * All functions run in the caller's transaction (cds.context).
  */
 
@@ -80,7 +82,9 @@ export async function ingestDocument({ source = 'UPLOAD', fileName, mimeType, bu
     await logEvent(orderId, 'RECEIVED', `${source}: ${fileName} (${meta.size} bytes, sha256 ${meta.sha256})`);
     LOG.info(`Inbound order ${orderId} received from ${source}: ${fileName}`);
 
-    return processInboundOrder(orderId, { buffer, fileType: meta.fileType });
+    const result = await processInboundOrder(orderId, { buffer, fileType: meta.fileType });
+    if (result.status === 'VALIDATED' && config.autoPost) return postSalesOrder(orderId);
+    return result;
 }
 
 /**
@@ -195,14 +199,74 @@ export async function validateInboundOrder(orderId) {
     return summarize(orderId);
 }
 
+/**
+ * Create the SAP sales order for a VALIDATED inbound order.
+ * Does nothing for any other status, so it is safe to call after every validation.
+ *
+ *   duplicate in SAP (customer PO + sold-to) -> FAILED, existing order named
+ *   SAP rejects the data                     -> FAILED, SAP messages as issues
+ *   SAP not reachable / not authorized       -> stays VALIDATED with a warning; resubmit later
+ *   created                                  -> CREATED with the SAP sales order number
+ */
+export async function postSalesOrder(orderId) {
+    const { InboundOrders, InboundItems } = db();
+    const order = await SELECT.one.from(InboundOrders, orderId);
+    if (!order) throw new Error(`Inbound order ${orderId} not found`);
+    if (order.status !== 'VALIDATED') return summarize(orderId);
+
+    // validation guarantees an active, mapped customer; re-read it for the sales area
+    const { customer } = await mapCustomer(order.customerId);
+    if (!customer) return validateInboundOrder(orderId);
+    const items = await SELECT.from(InboundItems).where({ parent_ID: orderId }).orderBy('lineNumber');
+    const ref = { customerPoNumber: order.customerPoNumber, soldToParty: customer.soldToParty };
+
+    let salesOrder;
+    try {
+        const s4 = await connectSalesOrderApi();
+        const existing = await findSalesOrder(s4, ref);
+        if (existing) {
+            const message = `Customer PO '${ref.customerPoNumber}' for sold-to party ${ref.soldToParty} already exists in SAP as sales order ${existing}.`;
+            await addIssues(orderId, [issue('ERROR', 'DUPLICATE_PO', message, { field: 'customerPoNumber' })]);
+            await setStatus(orderId, 'FAILED', message, { errorMessage: message });
+            return summarize(orderId);
+        }
+        salesOrder = await createSalesOrder(s4, toSalesOrderPayload(order, items, customer, { salesOrderType: getConfig().salesOrderType }));
+    } catch (e) {
+        const { business, httpStatus, messages } = describeSapError(e);
+        if (business) {
+            const text = messages.join('\n');
+            await addIssues(orderId, messages.map((m) => issue('ERROR', 'SAP_ERROR', `SAP: ${m}`)));
+            await setStatus(orderId, 'FAILED', `SAP rejected the sales order: ${text}`, { errorMessage: `SAP rejected the sales order:\n${text}` });
+            LOG.warn(`Inbound order ${orderId}: SAP rejected the sales order (HTTP ${httpStatus}): ${text}`);
+        } else {
+            const text = `SAP Sales Order API not available${httpStatus ? ` (HTTP ${httpStatus})` : ''}: ${messages.join(' ')} Resubmit the order to try again.`;
+            await addIssues(orderId, [issue('WARNING', 'SAP_UNAVAILABLE', text)]);
+            await UPDATE(InboundOrders, orderId).with({ errorMessage: text });
+            await logEvent(orderId, 'VALIDATED', text);
+            LOG.error(`Inbound order ${orderId}: Sales Order API call failed`, e);
+        }
+        return summarize(orderId);
+    }
+
+    await setStatus(orderId, 'CREATED', `Sales order ${salesOrder} created in SAP`, { salesOrderNumber: salesOrder, errorMessage: null });
+    LOG.info(`Inbound order ${orderId}: sales order ${salesOrder} created`);
+    return summarize(orderId);
+}
+
+async function addIssues(orderId, issues) {
+    const { InboundIssues } = db();
+    await INSERT.into(InboundIssues).entries(issues.map((i) => ({ ...i, message: i.message?.slice(0, 500), parent_ID: orderId })));
+}
+
 /** Compact result for API responses. */
 export async function summarize(orderId) {
     const { InboundOrders, InboundIssues } = db();
-    const order = await SELECT.one.from(InboundOrders, orderId).columns('ID', 'status', 'errorMessage');
+    const order = await SELECT.one.from(InboundOrders, orderId).columns('ID', 'status', 'errorMessage', 'salesOrderNumber');
     const issues = await SELECT.from(InboundIssues).columns('severity').where({ parent_ID: orderId });
     return {
         ID: order.ID,
         status: order.status,
+        salesOrderNumber: order.salesOrderNumber ?? null,
         errorMessage: order.errorMessage ?? null,
         errorCount: issues.filter((i) => i.severity === 'ERROR').length,
         warningCount: issues.filter((i) => i.severity === 'WARNING').length,
