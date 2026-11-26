@@ -15,6 +15,7 @@
   "scripts": {
     "start": "cds-serve",
     "watch": "cds watch",
+    "deploy:local": "cds deploy --with-mocks",
     "test": "node --test \"test/**/*.test.js\"",
     "test:unit": "node --test \"test/unit/*.test.js\"",
     "test:api": "node --test \"test/api/*.test.js\"",
@@ -22,7 +23,23 @@
   },
   "private": true,
   "cds": {
+    "po2so": {
+      "autoPost": true,
+      "salesOrderType": "OR"
+    },
     "requires": {
+      "API_SALES_ORDER_SRV": {
+        "kind": "odata-v2",
+        "model": "srv/external/API_SALES_ORDER_SRV",
+        "csrf": true,
+        "csrfInBatch": true,
+        "[production]": {
+          "credentials": {
+            "destination": "S4HC_SALES",
+            "path": "/sap/opu/odata/sap/API_SALES_ORDER_SRV"
+          }
+        }
+      },
       "db": {
         "[development]": {
           "kind": "sqlite",

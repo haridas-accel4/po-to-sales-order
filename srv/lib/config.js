@@ -7,6 +7,10 @@ const DEFAULTS = {
     minExtractionConfidence: 0.9,
     /** PDF extraction provider: none | document-ai | gen-ai-hub (later phase). */
     pdfExtraction: { provider: 'none' },
+    /** Post VALIDATED orders to SAP right after intake (upload / e-mail). */
+    autoPost: true,
+    /** SAP sales order type used for every order (standard order in most tenants). */
+    salesOrderType: 'OR',
 };
 
 /** Intake settings, overridable via `cds.po2so` in package.json / .cdsrc.json. */

@@ -516,6 +516,34 @@ sap.ui.define([
             }
         },
 
+        onReviewResubmit: async function () {
+            const dialog = this._reviewDialog;
+            const orderId = this._reviewOrder.ID;
+            dialog.setBusy(true);
+            try {
+                const response = await fetch(this._serviceUrl + "InboundOrders(" + orderId + ")/resubmit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Accept: "application/json" },
+                    body: "{}"
+                });
+                if (!response.ok) {
+                    throw await readError(response);
+                }
+                const result = await response.json();
+                await this._loadReview(orderId);
+                this.loadRecords();
+                if (result.status === "CREATED") {
+                    MessageBox.success("Sales Order " + result.salesOrderNumber + " was created in SAP.", { title: "Sales Order created" });
+                } else {
+                    this._announceStatus("Resubmitted; no Sales Order was created.");
+                }
+            } catch (error) {
+                MessageBox.error(error.message || "Resubmit failed.", { title: "Resubmit failed" });
+            } finally {
+                dialog.setBusy(false);
+            }
+        },
+
         /** "Add Mapping" on a MATERIAL_UNMAPPED / UOM_UNMAPPED issue: create the mapping, then revalidate this order. */
         onReviewAddMapping: async function (event) {
             const issue = event.getSource().getBindingContext("review").getObject();
@@ -685,7 +713,9 @@ sap.ui.define([
 
                 const result = await response.json();
                 const status = STATUS[result.status] || { text: result.status };
-                let text = file.name + " uploaded. Status: " + status.text + ".";
+                let text = result.salesOrderNumber
+                    ? file.name + " uploaded. Sales Order " + result.salesOrderNumber + " created in SAP."
+                    : file.name + " uploaded. Status: " + status.text + ".";
                 if (result.errorCount) {
                     text += " " + result.errorCount + " error(s): " + (result.errorMessage || "").split("\n").slice(0, 3).join(" ");
                 }

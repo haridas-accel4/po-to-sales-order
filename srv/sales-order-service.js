@@ -2,7 +2,7 @@ import cds from '@sap/cds';
 import { FileValidationError } from './lib/errors.js';
 import { decodeBase64 } from './lib/file-validation.js';
 import { invalidDates, protectedFieldsIn, PROTECTED_ORDER_FIELDS, PROTECTED_ITEM_FIELDS } from './lib/input-validation.js';
-import { ingestDocument, processInboundOrder, validateInboundOrder, FINAL_STATUSES } from './lib/pipeline.js';
+import { ingestDocument, processInboundOrder, validateInboundOrder, postSalesOrder, FINAL_STATUSES } from './lib/pipeline.js';
 import { MAPPING_RULES, trimTextFields, missingRequired, sameKey, conflictMessage } from './lib/mapping-validation.js';
 
 /** Orders that are no longer open for revalidation (REJECTED is reserved for exception closing). */
@@ -42,6 +42,17 @@ export default class SalesOrderService extends cds.ApplicationService {
                 return req.reject(409, 'This order was never extracted successfully; fix the cause and call reprocess() instead.');
             }
             await validateInboundOrder(order.ID);
+            return SELECT.one.from(InboundOrders, order.ID);
+        });
+
+        this.on('resubmit', InboundOrders, async (req) => {
+            const order = await loadOrder(req);
+            if (!order) return;
+            if (!order.extractionMethod) {
+                return req.reject(409, 'This order was never extracted successfully; fix the cause and call reprocess() instead.');
+            }
+            await validateInboundOrder(order.ID);
+            await postSalesOrder(order.ID);
             return SELECT.one.from(InboundOrders, order.ID);
         });
 

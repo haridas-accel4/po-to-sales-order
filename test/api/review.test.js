@@ -1,4 +1,4 @@
-import { describe, test } from 'node:test';
+import { describe, test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import cds from '@sap/cds';
@@ -7,6 +7,9 @@ import { loadUi5Module, reviewLogicUrl } from '../support/load-ui5-module.js';
 // Exercises the backend exactly the way the SAPUI5 review dialog does:
 // GET order -> reviewLogic.buildChanges/buildBatch -> JSON $batch -> GET -> revalidate.
 const { GET, POST } = cds.test(fileURLToPath(new URL('../..', import.meta.url)), '--in-memory');
+// These tests cover intake, review and validation: keep orders open instead of posting them to SAP
+// (posting is covered in test/api/sales-order-posting.test.js).
+before(() => { cds.env.po2so.autoPost = false; });
 const logic = loadUi5Module(reviewLogicUrl);
 
 const SRV = '/odata/v4/sales-order';
