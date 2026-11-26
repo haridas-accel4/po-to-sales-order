@@ -37,9 +37,20 @@
                         type="Transparent"
                         tooltip="Refresh"
                         press=".onRefresh"/>
-                    <Button icon="sap-icon://action-settings"
+                    <MenuButton id="settingsButton"
+                        icon="sap-icon://action-settings"
                         type="Transparent"
-                        tooltip="Settings"/>
+                        tooltip="Settings">
+                        <menu>
+                            <Menu id="settingsMenu">
+                                <MenuItem text="Adapt Filters" icon="sap-icon://filter" press=".onOpenAdaptFilters"/>
+                                <MenuItem text="Table Settings" icon="sap-icon://table-view" press=".onOpenTableSettings"/>
+                                <MenuItem text="Gmail Intake" icon="sap-icon://email" press=".onOpenGmail"/>
+                                <MenuItem text="Manage Mappings" icon="sap-icon://chain-link" press=".onOpenMappings"/>
+                                <MenuItem text="Restore Default View" icon="sap-icon://reset" press=".onResetListSettings" startsSection="true"/>
+                            </Menu>
+                        </menu>
+                    </MenuButton>
                 </OverflowToolbar>
             </customHeader>
 
@@ -72,23 +83,28 @@
                                             liveChange=".onSearch"/>
                                     </VBox>
 
-                                    <VBox class="po2soField">
-                                        <Label text="Purchase Order"/>
+                                    <VBox class="po2soField" visible="{listSettings>/filterVisible/poNumber}">
+                                        <Label text="Purchase Order" labelFor="filterPoNumber"/>
                                         <Input
+                                            id="filterPoNumber"
                                             value="{filters>/poNumber}"
-                                            placeholder="Enter PO number"/>
+                                            placeholder="Enter PO number"
+                                            submit=".onApplyFilters"/>
                                     </VBox>
 
-                                    <VBox class="po2soField">
-                                        <Label text="Customer"/>
+                                    <VBox class="po2soField" visible="{listSettings>/filterVisible/customer}">
+                                        <Label text="Customer" labelFor="filterCustomer"/>
                                         <Input
+                                            id="filterCustomer"
                                             value="{filters>/customer}"
-                                            placeholder="Customer name or ID"/>
+                                            placeholder="Customer name or ID"
+                                            submit=".onApplyFilters"/>
                                     </VBox>
 
-                                    <VBox class="po2soField">
-                                        <Label text="Status"/>
+                                    <VBox class="po2soField" visible="{listSettings>/filterVisible/status}">
+                                        <Label text="Status" labelFor="filterStatus"/>
                                         <Select
+                                            id="filterStatus"
                                             selectedKey="{filters>/status}"
                                             width="100%">
                                             <core:Item key="" text="All Statuses"/>
@@ -101,9 +117,10 @@
                                         </Select>
                                     </VBox>
 
-                                    <VBox class="po2soField">
-                                        <Label text="File Type"/>
+                                    <VBox class="po2soField" visible="{listSettings>/filterVisible/fileType}">
+                                        <Label text="File Type" labelFor="filterFileType"/>
                                         <Select
+                                            id="filterFileType"
                                             selectedKey="{filters>/fileType}"
                                             width="100%">
                                             <core:Item key="" text="All File Types"/>
@@ -113,37 +130,48 @@
                                         </Select>
                                     </VBox>
 
-                                    <VBox class="po2soField">
-                                        <Label text="PO Date From"/>
+                                    <VBox class="po2soField" visible="{listSettings>/filterVisible/dateFrom}">
+                                        <Label text="PO Date From" labelFor="filterDateFrom"/>
                                         <DatePicker
+                                            id="filterDateFrom"
                                             value="{filters>/dateFrom}"
                                             valueFormat="yyyy-MM-dd"
                                             displayFormat="medium"
+                                            change=".onFilterDateChange"
                                             width="100%"/>
                                     </VBox>
 
-                                    <VBox class="po2soField">
-                                        <Label text="PO Date To"/>
+                                    <VBox class="po2soField" visible="{listSettings>/filterVisible/dateTo}">
+                                        <Label text="PO Date To" labelFor="filterDateTo"/>
                                         <DatePicker
+                                            id="filterDateTo"
                                             value="{filters>/dateTo}"
                                             valueFormat="yyyy-MM-dd"
                                             displayFormat="medium"
+                                            change=".onFilterDateChange"
                                             width="100%"/>
                                     </VBox>
 
-                                    <!-- 8th cell: filter actions, aligned with the fields -->
+                                    <!-- last cell: filter actions, aligned with the fields -->
                                     <HBox justifyContent="End" alignItems="End">
-                                        <Button text="Go"
+                                        <Button id="goButton"
+                                            text="Go"
                                             type="Emphasized"
+                                            tooltip="Apply the filters and show the matching purchase orders"
                                             press=".onApplyFilters"
                                             class="sapUiTinyMarginEnd"/>
-                                        <Button text="Clear"
+                                        <Button id="clearButton"
+                                            text="Clear"
                                             type="Transparent"
+                                            tooltip="Reset all filter values and show all purchase orders"
                                             press=".onClearFilters"
                                             class="sapUiTinyMarginEnd"/>
-                                        <Button text="Adapt Filters"
+                                        <Button id="adaptFiltersButton"
+                                            text="Adapt Filters"
                                             type="Transparent"
-                                            icon="sap-icon://filter"/>
+                                            icon="sap-icon://filter"
+                                            tooltip="Choose which filter fields are shown"
+                                            press=".onOpenAdaptFilters"/>
                                     </HBox>
 
                                 </cssgrid:items>
@@ -292,9 +320,11 @@
                                         type="Transparent"
                                         tooltip="Export"/>
                                     <Button
+                                        id="tableSettingsButton"
                                         icon="sap-icon://action-settings"
                                         type="Transparent"
-                                        tooltip="Table Settings"/>
+                                        tooltip="Table Settings"
+                                        press=".onOpenTableSettings"/>
                                 </OverflowToolbar>
 
                                 <ScrollContainer
@@ -315,15 +345,15 @@
                                     noDataText="No purchase order records available. Upload a PO to get started.">
 
                                     <columns>
-                                        <Column width="12rem"><Text text="File Name"/></Column>
-                                        <Column width="12rem"><Text text="Customer"/></Column>
-                                        <Column width="12rem"><Text text="Purchase Order"/></Column>
-                                        <Column width="10rem"><Text text="PO Date"/></Column>
-                                        <Column width="8rem"><Text text="File Type"/></Column>
-                                        <Column width="9rem"><Text text="Source"/></Column>
-                                        <Column width="10rem"><Text text="Status"/></Column>
-                                        <Column width="12rem"><Text text="Sales Order"/></Column>
-                                        <Column width="12rem"><Text text="Created On"/></Column>
+                                        <Column width="12rem" visible="{listSettings>/columnVisible/fileName}"><Text text="File Name"/></Column>
+                                        <Column width="12rem" visible="{listSettings>/columnVisible/customer}"><Text text="Customer"/></Column>
+                                        <Column width="12rem" visible="{listSettings>/columnVisible/poNumber}"><Text text="Purchase Order"/></Column>
+                                        <Column width="10rem" visible="{listSettings>/columnVisible/poDate}"><Text text="PO Date"/></Column>
+                                        <Column width="8rem" visible="{listSettings>/columnVisible/fileType}"><Text text="File Type"/></Column>
+                                        <Column width="9rem" visible="{listSettings>/columnVisible/source}"><Text text="Source"/></Column>
+                                        <Column width="10rem" visible="{listSettings>/columnVisible/status}"><Text text="Status"/></Column>
+                                        <Column width="12rem" visible="{listSettings>/columnVisible/salesOrder}"><Text text="Sales Order"/></Column>
+                                        <Column width="12rem" visible="{listSettings>/columnVisible/createdOn}"><Text text="Created On"/></Column>
                                     </columns>
 
                                     <items>

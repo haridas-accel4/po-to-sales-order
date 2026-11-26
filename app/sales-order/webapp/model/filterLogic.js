@@ -93,6 +93,20 @@ sap.ui.define([], function () {
         });
     }
 
+    /**
+     * Tab that shows the results of "Go" when it is pressed on the "PO Upload" tab
+     * (that tab shows the upload form, not the table): "Exceptions" when the status
+     * filter only occurs there (Failed), otherwise "Processed POs".
+     * @returns {string} tab key
+     */
+    function resultTab(filters) {
+        const status = filters && filters.status;
+        if (status && TAB_STATUSES.exceptions.includes(status) && !TAB_STATUSES.processed.includes(status)) {
+            return "exceptions";
+        }
+        return "processed";
+    }
+
     /** Record counts per tab (independent of filters, as before). */
     function tabCounts(records) {
         const count = function (statuses) {
@@ -112,6 +126,7 @@ sap.ui.define([], function () {
         matchesSearch: matchesSearch,
         validateFilters: validateFilters,
         applyFilters: applyFilters,
+        resultTab: resultTab,
         tabCounts: tabCounts
     };
 });

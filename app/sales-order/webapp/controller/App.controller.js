@@ -12,7 +12,9 @@ sap.ui.define([
     "po2so/salesorder/model/mappingLogic",
     "po2so/salesorder/controller/MappingManager",
     "po2so/salesorder/model/gmailLogic",
-    "po2so/salesorder/controller/GmailManager"
+    "po2so/salesorder/controller/GmailManager",
+    "po2so/salesorder/model/listSettingsLogic",
+    "po2so/salesorder/controller/ListSettingsManager"
 ], function (
     Controller,
     JSONModel,
@@ -26,7 +28,9 @@ sap.ui.define([
     mappingLogic,
     MappingManager,
     gmailLogic,
-    GmailManager
+    GmailManager,
+    listSettingsLogic,
+    ListSettingsManager
 ) {
     "use strict";
 
@@ -149,6 +153,11 @@ sap.ui.define([
                 onChanged: function () { this.loadRecords(); }.bind(this)
             });
 
+            // Adapt Filters / Table Settings (filter fields, columns, sorting), kept per browser
+            this._listSettings = new ListSettingsManager(this.getView(), {
+                onChanged: this._onListSettingsChanged.bind(this)
+            });
+
             // official SAP logo shipped with the app (sap.com blocks hotlinking from browsers)
             this.byId("sapLogo").setSrc(sap.ui.require.toUrl("po2so/salesorder/img/sap-logo.svg"));
 
@@ -190,7 +199,7 @@ sap.ui.define([
 
                 this._allRecords = orders.map(this._toRecord.bind(this));
                 this.updateCounts();
-                this.onApplyFilters();
+                this._refreshTable();
                 return true;
             } catch (error) {
                 MessageBox.error("Purchase order records could not be loaded.", {
@@ -233,7 +242,8 @@ sap.ui.define([
                 statusState: status.state,
                 errorMessage: order.errorMessage || "",
                 salesOrder: order.salesOrderNumber || "",
-                createdOn: order.createdAt ? createdAtFormat.format(new Date(order.createdAt)) : ""
+                createdOn: order.createdAt ? createdAtFormat.format(new Date(order.createdAt)) : "",
+                createdAtIso: order.createdAt || ""
             };
         },
 
@@ -260,36 +270,134 @@ sap.ui.define([
         },
 
         onTabSelect: function () {
-            this.updateTableTitle();
-            this.onApplyFilters();
+            this._refreshTable();
         },
 
-        onApplyFilters: function () {
+        /**
+         * Show the records of the selected tab that match the current filter values,
+         * sorted as set in Table Settings. All records are loaded (server-side paging is
+         * followed in _getAll), so filtering and sorting run on the complete list and the
+         * table's growing (50 rows at a time) starts again on the result.
+         * @returns {boolean} false if the filter values are inconsistent
+         */
+        _refreshTable: function () {
             const values = this.getView().getModel("filters").getData();
             const selectedTab = this.byId("mainTabs").getSelectedKey();
 
             const problem = filterLogic.validateFilters(values);
             if (problem) {
                 MessageToast.show(problem);
+                return false;
+            }
+
+            const records = listSettingsLogic.sortRecords(
+                filterLogic.applyFilters(this._allRecords, values, selectedTab),
+                this._listSettings.getSettings().sort);
+            this.getView().getModel("records").setProperty("/records", records);
+            this.updateTableTitle();
+            return true;
+        },
+
+        _filterDatePickers: function () {
+            return [this.byId("filterDateFrom"), this.byId("filterDateTo")];
+        },
+
+        /** Whether a filter field is shown in the filter bar (see Adapt Filters). */
+        _isFilterShown: function (control) {
+            return control.getParent().getVisible();
+        },
+
+        /** "Go" (also Enter in a filter field): apply the filter bar and show the matching records. */
+        onApplyFilters: function () {
+            // a DatePicker does not write unparsable input to the model -> do not silently ignore it
+            const invalid = this._filterDatePickers().find(function (picker) {
+                return this._isFilterShown(picker) && picker.getValueState() === "Error";
+            }, this);
+            if (invalid) {
+                MessageToast.show("Enter a valid date for '" + invalid.getParent().getItems()[0].getText() + "'.");
                 return;
             }
 
-            const records = filterLogic.applyFilters(this._allRecords, values, selectedTab);
-            this.getView().getModel("records").setProperty("/records", records);
-            this.updateTableTitle();
+            // the "PO Upload" tab shows the upload form, not the table -> show the results in a records tab
+            const tabs = this.byId("mainTabs");
+            if (tabs.getSelectedKey() === "upload") {
+                tabs.setSelectedKey(filterLogic.resultTab(this.getView().getModel("filters").getData()));
+            }
+            this._refreshTable();
         },
 
+        onFilterDateChange: function (event) {
+            const picker = event.getSource();
+            const valid = event.getParameter("valid") || !event.getParameter("value");
+            picker.setValueState(valid ? "None" : "Error");
+            picker.setValueStateText(valid ? "" : "Enter a valid date.");
+        },
+
+        _resetFilterInputs: function (values) {
+            const model = this.getView().getModel("filters");
+            model.setData(values);
+            // force the values into the controls, also where the model value did not change
+            // (e.g. unparsable text in a DatePicker that never reached the model)
+            model.refresh(true);
+            this._filterDatePickers().forEach(function (picker) {
+                if (!picker.getValue()) {
+                    picker.setValueState("None");
+                    picker.setValueStateText("");
+                }
+            });
+        },
+
+        /** "Clear": reset search and every filter field and show the complete list of the selected tab. */
         onClearFilters: function () {
-            // resets the search text as well (bound to filters>/search)
-            this.getView().getModel("filters").setData(filterLogic.emptyFilters());
-            this.onApplyFilters();
+            this._resetFilterInputs(filterLogic.emptyFilters());
+            this._refreshTable();
+            MessageToast.show("Filters cleared.");
         },
 
         onSearch: function (event) {
             // "search" fires with `query` (also "" when the clear icon is pressed), "liveChange" with `newValue`
-            const query = event.getId() === "liveChange" ? event.getParameter("newValue") : event.getParameter("query");
+            const live = event.getId() === "liveChange";
+            const query = live ? event.getParameter("newValue") : event.getParameter("query");
             this.getView().getModel("filters").setProperty("/search", query || "");
-            this.onApplyFilters();
+            if (!live && query) {
+                this.onApplyFilters(); // Enter / search icon behaves like "Go"
+            } else {
+                this._refreshTable();
+            }
+        },
+
+        // ------------------------------------------------------------------ list settings
+
+        /** Hidden filter fields must not keep filtering the list; then apply columns / sorting. */
+        _onListSettingsChanged: function (settings) {
+            const values = this.getView().getModel("filters").getData();
+            const visibleValues = listSettingsLogic.clearHiddenFilters(values, settings.filterVisible);
+            if (JSON.stringify(visibleValues) !== JSON.stringify(values)) {
+                this._resetFilterInputs(visibleValues);
+            }
+            // hidden date fields also drop unparsable input that never reached the model
+            [["filterDateFrom", "dateFrom"], ["filterDateTo", "dateTo"]].forEach(function (pair) {
+                const picker = this.byId(pair[0]);
+                if (settings.filterVisible[pair[1]] === false) {
+                    picker.setValue("");
+                    picker.setValueState("None");
+                    picker.setValueStateText("");
+                }
+            }, this);
+            this._refreshTable();
+        },
+
+        onOpenAdaptFilters: function () {
+            this._listSettings.openAdaptFilters(this.byId("adaptFiltersButton"));
+        },
+
+        onOpenTableSettings: function () {
+            this._listSettings.openTableSettings(this.byId("tableSettingsButton"));
+        },
+
+        onResetListSettings: function () {
+            this._listSettings.reset();
+            MessageToast.show("Default filter fields, columns and sorting restored.");
         },
 
         onRefresh: async function () {
