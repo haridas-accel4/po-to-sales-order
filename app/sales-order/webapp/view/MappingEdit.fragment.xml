@@ -1,0 +1,87 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form">
+
+    <Dialog
+        id="mappingEditDialog"
+        title="{mappingEdit>/title}"
+        contentWidth="32rem"
+        busyIndicatorDelay="0"
+        class="sapUiSizeCompact"
+        afterClose=".onMappingEditAfterClose">
+        <content>
+            <MessageStrip
+                visible="{= !!${mappingEdit>/hint} }"
+                text="{mappingEdit>/hint}"
+                type="Information"
+                showIcon="true"
+                class="sapUiSmallMargin"/>
+            <form:SimpleForm
+                editable="true"
+                layout="ResponsiveGridLayout"
+                labelSpanL="4" labelSpanM="4" labelSpanS="12"
+                columnsL="1" columnsM="1">
+                <form:content>
+                    <!-- customers -->
+                    <Label text="Customer ID" required="true" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <Input id="mapCustomerId" value="{mappingEdit>/draft/customerId}" maxLength="20"
+                        visible="{= ${mappingEdit>/type} === 'customers' }" editable="{= ${mappingEdit>/editable/customerId} }"
+                        valueState="{= ${mappingEdit>/vs/customerId} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/customerId}"/>
+                    <Label text="Customer Name" required="true" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <Input id="mapCustomerName" value="{mappingEdit>/draft/customerName}" maxLength="100"
+                        visible="{= ${mappingEdit>/type} === 'customers' }"
+                        valueState="{= ${mappingEdit>/vs/customerName} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/customerName}"/>
+                    <Label text="Sold-to Party" required="true" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <Input id="mapCustomerSoldTo" value="{mappingEdit>/draft/soldToParty}" maxLength="10"
+                        visible="{= ${mappingEdit>/type} === 'customers' }"
+                        valueState="{= ${mappingEdit>/vs/soldToParty} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/soldToParty}"/>
+                    <Label text="Sales Organization" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <Input value="{mappingEdit>/draft/salesOrganization}" maxLength="4" visible="{= ${mappingEdit>/type} === 'customers' }"
+                        valueState="{= ${mappingEdit>/vs/salesOrganization} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/salesOrganization}"/>
+                    <Label text="Distribution Channel" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <Input value="{mappingEdit>/draft/distributionChannel}" maxLength="2" visible="{= ${mappingEdit>/type} === 'customers' }"
+                        valueState="{= ${mappingEdit>/vs/distributionChannel} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/distributionChannel}"/>
+                    <Label text="Division" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <Input value="{mappingEdit>/draft/division}" maxLength="2" visible="{= ${mappingEdit>/type} === 'customers' }"
+                        valueState="{= ${mappingEdit>/vs/division} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/division}"/>
+
+                    <!-- material mappings -->
+                    <Label text="Sold-to Party" required="true" visible="{= ${mappingEdit>/type} === 'materials' }"/>
+                    <Select id="mapMaterialSoldTo" width="100%" forceSelection="false" showSecondaryValues="true"
+                        visible="{= ${mappingEdit>/type} === 'materials' }" enabled="{= ${mappingEdit>/editable/soldToParty} }"
+                        selectedKey="{mappingEdit>/draft/soldToParty}"
+                        valueState="{= ${mappingEdit>/vs/soldToParty} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/soldToParty}"
+                        items="{ path: 'mappingEdit>/soldToOptions', templateShareable: false }">
+                        <core:ListItem key="{mappingEdit>key}" text="{mappingEdit>text}" additionalText="{mappingEdit>additionalText}"/>
+                    </Select>
+                    <Label text="Customer Material" required="true" visible="{= ${mappingEdit>/type} === 'materials' }"/>
+                    <Input id="mapCustomerMaterial" value="{mappingEdit>/draft/customerMaterial}" maxLength="35"
+                        visible="{= ${mappingEdit>/type} === 'materials' }" editable="{= ${mappingEdit>/editable/customerMaterial} }"
+                        valueState="{= ${mappingEdit>/vs/customerMaterial} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/customerMaterial}"/>
+                    <Label text="SAP Material" required="true" visible="{= ${mappingEdit>/type} === 'materials' }"/>
+                    <Input id="mapMaterial" value="{mappingEdit>/draft/material}" maxLength="40"
+                        visible="{= ${mappingEdit>/type} === 'materials' }"
+                        valueState="{= ${mappingEdit>/vs/material} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/material}"/>
+                    <Label text="Description" visible="{= ${mappingEdit>/type} === 'materials' }"/>
+                    <Input value="{mappingEdit>/draft/description}" maxLength="100" visible="{= ${mappingEdit>/type} === 'materials' }"
+                        valueState="{= ${mappingEdit>/vs/description} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/description}"/>
+
+                    <!-- UoM mappings -->
+                    <Label text="External UoM" required="true" visible="{= ${mappingEdit>/type} === 'uoms' }"/>
+                    <Input id="mapExternalUom" value="{mappingEdit>/draft/externalUom}" maxLength="10"
+                        visible="{= ${mappingEdit>/type} === 'uoms' }" editable="{= ${mappingEdit>/editable/externalUom} }"
+                        valueState="{= ${mappingEdit>/vs/externalUom} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/externalUom}"/>
+                    <Label text="SAP Unit" required="true" visible="{= ${mappingEdit>/type} === 'uoms' }"/>
+                    <Input id="mapSapUnit" value="{mappingEdit>/draft/sapUnit}" maxLength="3"
+                        visible="{= ${mappingEdit>/type} === 'uoms' }"
+                        valueState="{= ${mappingEdit>/vs/sapUnit} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/sapUnit}"/>
+                </form:content>
+            </form:SimpleForm>
+        </content>
+        <buttons>
+            <Button id="mappingSaveButton" text="Save" type="Emphasized" press=".onMappingSave"/>
+            <Button text="Cancel" press=".onMappingCancel"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

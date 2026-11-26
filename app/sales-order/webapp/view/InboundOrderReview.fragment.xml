@@ -1,0 +1,256 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form">
+
+    <Dialog
+        id="reviewDialog"
+        title="Review Purchase Order"
+        contentWidth="72rem"
+        contentHeight="80%"
+        resizable="true"
+        draggable="true"
+        busyIndicatorDelay="0"
+        class="sapUiSizeCompact"
+        escapeHandler=".onReviewEscape">
+
+        <content>
+            <VBox class="sapUiSmallMargin">
+
+                <!-- header line: PO number, status, original file -->
+                <OverflowToolbar style="Clear" class="sapUiTinyMarginBottom">
+                    <Title text="{= ${review>/order/customerPoNumber} || 'Purchase Order' }" level="H2"/>
+                    <ObjectStatus
+                        text="{review>/order/statusText}"
+                        state="{review>/order/statusState}"
+                        inverted="true"
+                        class="sapUiSmallMarginBegin"/>
+                    <ToolbarSpacer/>
+                    <Link
+                        text="{review>/order/fileName}"
+                        href="{review>/order/fileUrl}"
+                        target="_blank"
+                        tooltip="Download the original uploaded file"/>
+                </OverflowToolbar>
+
+                <MessageStrip
+                    visible="{= !${review>/editable} }"
+                    text="{review>/readOnlyReason}"
+                    type="Information"
+                    showIcon="true"
+                    class="sapUiTinyMarginBottom"/>
+
+                <MessageStrip
+                    visible="{review>/dirty}"
+                    text="You have unsaved changes. Saving re-runs mapping and validation on the server."
+                    type="Information"
+                    showIcon="true"
+                    class="sapUiTinyMarginBottom"/>
+
+                <!-- PO header -->
+                <form:SimpleForm
+                    id="reviewHeaderForm"
+                    editable="true"
+                    layout="ResponsiveGridLayout"
+                    title="Purchase Order Header"
+                    labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12"
+                    columnsXL="2" columnsL="2" columnsM="1"
+                    singleContainerFullSize="false">
+                    <form:content>
+                        <core:Title text="Customer and PO"/>
+                        <Label text="Customer" labelFor="reviewCustomer"/>
+                        <Select
+                            id="reviewCustomer"
+                            forceSelection="false"
+                            showSecondaryValues="true"
+                            enabled="{review>/editable}"
+                            selectedKey="{review>/order/customerId}"
+                            change=".onReviewChange"
+                            valueState="{= ${review>/headerVs/customerId/state} || 'None' }"
+                            valueStateText="{review>/headerVs/customerId/text}"
+                            items="{ path: 'review>/customers', templateShareable: false }">
+                            <core:ListItem key="{review>key}" text="{review>text}" additionalText="{review>additionalText}"/>
+                        </Select>
+
+                        <Label text="Sold-to Party"/>
+                        <Text text="{= ${review>/order/soldToParty} || '–' }" tooltip="Determined from the customer mapping"/>
+
+                        <Label text="Customer PO Number" labelFor="reviewPoNumber"/>
+                        <Input
+                            id="reviewPoNumber"
+                            value="{review>/order/customerPoNumber}"
+                            valueLiveUpdate="true"
+                            maxLength="35"
+                            editable="{review>/editable}"
+                            liveChange=".onReviewChange"
+                            valueState="{= ${review>/headerVs/customerPoNumber/state} || 'None' }"
+                            valueStateText="{review>/headerVs/customerPoNumber/text}"/>
+
+                        <core:Title text="Dates and Processing"/>
+                        <Label text="PO Date" labelFor="reviewPoDate"/>
+                        <DatePicker
+                            id="reviewPoDate"
+                            value="{review>/order/poDate}"
+                            valueFormat="yyyy-MM-dd"
+                            displayFormat="medium"
+                            editable="{review>/editable}"
+                            change=".onReviewDateChange"
+                            valueState="{= ${review>/headerVs/poDate/state} || 'None' }"
+                            valueStateText="{review>/headerVs/poDate/text}"/>
+
+                        <Label text="Requested Delivery Date" labelFor="reviewDeliveryDate"/>
+                        <DatePicker
+                            id="reviewDeliveryDate"
+                            value="{review>/order/requestedDeliveryDate}"
+                            valueFormat="yyyy-MM-dd"
+                            displayFormat="medium"
+                            editable="{review>/editable}"
+                            change=".onReviewDateChange"
+                            valueState="{= ${review>/headerVs/requestedDeliveryDate/state} || 'None' }"
+                            valueStateText="{review>/headerVs/requestedDeliveryDate/text}"/>
+
+                        <Label text="Processing Status"/>
+                        <ObjectStatus
+                            text="{review>/order/statusText}"
+                            state="{review>/order/statusState}"
+                            tooltip="Set by the backend after validation"/>
+
+                        <Label text="Extraction"/>
+                        <Text text="{review>/order/extraction}"/>
+                    </form:content>
+                </form:SimpleForm>
+
+                <!-- items -->
+                <OverflowToolbar style="Clear" class="sapUiSmallMarginTop">
+                    <Title text="Items ({= ${review>/items}.length })" level="H3"/>
+                    <ToolbarSpacer/>
+                    <Text text="SAP Material and SAP UoM are determined from the mapping tables."/>
+                </OverflowToolbar>
+                <ScrollContainer horizontal="true" vertical="false" width="100%">
+                    <Table
+                        id="reviewItemsTable"
+                        fixedLayout="Strict"
+                        items="{ path: 'review>/items', templateShareable: false }"
+                        noDataText="No items were extracted.">
+                        <columns>
+                            <Column width="5rem"><Text text="Item"/></Column>
+                            <Column width="12rem"><Text text="Customer Material"/></Column>
+                            <Column width="9rem"><Text text="SAP Material"/></Column>
+                            <Column width="14rem"><Text text="Description"/></Column>
+                            <Column width="8rem" hAlign="End"><Text text="Quantity"/></Column>
+                            <Column width="7rem"><Text text="External UoM"/></Column>
+                            <Column width="6rem"><Text text="SAP UoM"/></Column>
+                            <Column width="9rem" hAlign="End"><Text text="Customer Unit Price" tooltip="Informational only - never used as SAP sales price"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem highlight="{review>highlight}">
+                                <cells>
+                                    <Text text="{review>lineNumber}"/>
+                                    <Input
+                                        value="{review>customerMaterial}"
+                                        valueLiveUpdate="true"
+                                        maxLength="35"
+                                        editable="{review>/editable}"
+                                        liveChange=".onReviewChange"
+                                        valueState="{= ${review>vs/customerMaterial/state} || 'None' }"
+                                        valueStateText="{review>vs/customerMaterial/text}"/>
+                                    <ObjectStatus
+                                        text="{= ${review>material} || 'Not mapped' }"
+                                        state="{= ${review>material} ? 'None' : 'Warning' }"
+                                        tooltip="From the material mapping (read-only)"/>
+                                    <Input
+                                        value="{review>description}"
+                                        valueLiveUpdate="true"
+                                        maxLength="100"
+                                        editable="{review>/editable}"
+                                        liveChange=".onReviewChange"/>
+                                    <Input
+                                        value="{review>quantity}"
+                                        valueLiveUpdate="true"
+                                        textAlign="End"
+                                        editable="{review>/editable}"
+                                        liveChange=".onReviewChange"
+                                        valueState="{= ${review>vs/quantity/state} || 'None' }"
+                                        valueStateText="{review>vs/quantity/text}"/>
+                                    <Input
+                                        value="{review>customerUom}"
+                                        valueLiveUpdate="true"
+                                        maxLength="10"
+                                        editable="{review>/editable}"
+                                        liveChange=".onReviewChange"
+                                        valueState="{= ${review>vs/customerUom/state} || 'None' }"
+                                        valueStateText="{review>vs/customerUom/text}"/>
+                                    <ObjectStatus
+                                        text="{= ${review>sapUom} || 'Not mapped' }"
+                                        state="{= ${review>sapUom} ? 'None' : 'Warning' }"
+                                        tooltip="From the UoM mapping (read-only)"/>
+                                    <Text text="{review>customerUnitPrice}" tooltip="Informational only - never used as SAP sales price"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+                    </Table>
+                </ScrollContainer>
+
+                <!-- validation issues -->
+                <OverflowToolbar style="Clear" class="sapUiSmallMarginTop">
+                    <Title text="Validation Issues ({= ${review>/issues}.length })" level="H3"/>
+                </OverflowToolbar>
+                <ScrollContainer horizontal="true" vertical="false" width="100%">
+                    <Table
+                        id="reviewIssuesTable"
+                        fixedLayout="Strict"
+                        items="{ path: 'review>/issues', templateShareable: false }"
+                        noDataText="No validation issues.">
+                        <columns>
+                            <Column width="7rem"><Text text="Severity"/></Column>
+                            <Column width="12rem"><Text text="Error Code"/></Column>
+                            <Column width="12rem"><Text text="Field"/></Column>
+                            <Column width="5rem"><Text text="Item"/></Column>
+                            <Column width="30rem"><Text text="Description"/></Column>
+                            <Column width="9rem"><Text text="Action"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem>
+                                <cells>
+                                    <ObjectStatus text="{review>severityText}" state="{review>severityState}"/>
+                                    <Text text="{review>code}"/>
+                                    <Text text="{review>fieldLabel}"/>
+                                    <Text text="{review>lineNumber}"/>
+                                    <Text text="{review>message}"/>
+                                    <Button
+                                        text="Add Mapping"
+                                        icon="sap-icon://chain-link"
+                                        type="Transparent"
+                                        visible="{review>canAddMapping}"
+                                        enabled="{= !${review>/dirty} }"
+                                        tooltip="Create the missing mapping and revalidate this order"
+                                        press=".onReviewAddMapping"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+                    </Table>
+                </ScrollContainer>
+            </VBox>
+        </content>
+
+        <buttons>
+            <Button
+                id="reviewSaveButton"
+                text="Save Changes"
+                type="Emphasized"
+                icon="sap-icon://save"
+                enabled="{review>/canSave}"
+                press=".onReviewSave"/>
+            <Button
+                id="reviewRevalidateButton"
+                text="Revalidate"
+                icon="sap-icon://validate"
+                enabled="{review>/canRevalidate}"
+                tooltip="Re-run mapping and validation, e.g. after maintaining mappings"
+                press=".onReviewRevalidate"/>
+            <Button
+                text="Close"
+                press=".onReviewClose"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,4 @@
+customerId,customerName,soldToParty,salesOrganization,distributionChannel,division,active
+ACME,ACME Industries Ltd.,0010100001,1010,10,00,true
+GLOBEX,Globex Corporation,0010100002,1010,10,00,true
+INACTIVE,Old Customer,0010100009,1010,10,00,false

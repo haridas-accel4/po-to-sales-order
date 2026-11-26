@@ -1,0 +1,181 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <Dialog
+        id="manageMappingsDialog"
+        title="Manage Mappings"
+        contentWidth="72rem"
+        contentHeight="80%"
+        resizable="true"
+        draggable="true"
+        busyIndicatorDelay="0"
+        class="sapUiSizeCompact"
+        afterClose=".onMappingsAfterClose">
+
+        <content>
+            <MessageStrip
+                text="Mappings are used when purchase orders are validated. After changing mappings, use 'Revalidate Open Orders' to apply them to orders that are not yet completed."
+                type="Information"
+                showIcon="true"
+                class="sapUiSmallMargin"/>
+
+            <IconTabBar
+                id="mappingTabs"
+                expandable="false"
+                selectedKey="{mappings>/tab}"
+                select=".onMappingTabSelect"
+                class="sapUiResponsiveContentPadding">
+                <items>
+                    <!-- Customers -->
+                    <IconTabFilter key="customers" text="Customers" icon="sap-icon://customer" count="{= ${mappings>/customers/rows}.length }">
+                        <OverflowToolbar style="Clear">
+                            <Title text="Customers ({= ${mappings>/customers/view}.length })" level="H3"/>
+                            <ToolbarSpacer/>
+                            <SearchField width="14rem" value="{mappings>/customers/query}" liveChange=".onMappingSearch" search=".onMappingSearch"/>
+                            <Button text="Add" icon="sap-icon://add" type="Transparent" press=".onMappingAdd"/>
+                            <Button text="Edit" icon="sap-icon://edit" type="Transparent" enabled="{= !!${mappings>/customers/selected} }" press=".onMappingEdit"/>
+                            <Button
+                                text="{= ${mappings>/customers/selected/active} === false ? 'Activate' : 'Deactivate' }"
+                                icon="{= ${mappings>/customers/selected/active} === false ? 'sap-icon://activate' : 'sap-icon://decline' }"
+                                type="Transparent"
+                                enabled="{= !!${mappings>/customers/selected} }"
+                                press=".onMappingToggleActive"/>
+                        </OverflowToolbar>
+                        <ScrollContainer horizontal="true" vertical="true" height="26rem" width="100%">
+                            <Table
+                                id="customersTable"
+                                mode="SingleSelectLeft"
+                                fixedLayout="Strict"
+                                sticky="ColumnHeaders"
+                                selectionChange=".onMappingSelect"
+                                items="{ path: 'mappings>/customers/view', templateShareable: false }"
+                                noDataText="No customers maintained.">
+                                <columns>
+                                    <Column width="9rem"><Text text="Customer ID"/></Column>
+                                    <Column width="16rem"><Text text="Customer Name"/></Column>
+                                    <Column width="9rem"><Text text="Sold-to Party"/></Column>
+                                    <Column width="8rem"><Text text="Sales Org."/></Column>
+                                    <Column width="8rem"><Text text="Distr. Channel"/></Column>
+                                    <Column width="6rem"><Text text="Division"/></Column>
+                                    <Column width="7rem"><Text text="Status"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{mappings>customerId}"/>
+                                            <Text text="{mappings>customerName}"/>
+                                            <Text text="{mappings>soldToParty}"/>
+                                            <Text text="{mappings>salesOrganization}"/>
+                                            <Text text="{mappings>distributionChannel}"/>
+                                            <Text text="{mappings>division}"/>
+                                            <ObjectStatus
+                                                text="{= ${mappings>active} === false ? 'Inactive' : 'Active' }"
+                                                state="{= ${mappings>active} === false ? 'None' : 'Success' }"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </IconTabFilter>
+
+                    <!-- Material mappings -->
+                    <IconTabFilter key="materials" text="Material Mappings" icon="sap-icon://product" count="{= ${mappings>/materials/rows}.length }">
+                        <OverflowToolbar style="Clear">
+                            <Title text="Material Mappings ({= ${mappings>/materials/view}.length })" level="H3"/>
+                            <ToolbarSpacer/>
+                            <SearchField width="14rem" value="{mappings>/materials/query}" liveChange=".onMappingSearch" search=".onMappingSearch"/>
+                            <Button text="Add" icon="sap-icon://add" type="Transparent" press=".onMappingAdd"/>
+                            <Button text="Edit" icon="sap-icon://edit" type="Transparent" enabled="{= !!${mappings>/materials/selected} }" press=".onMappingEdit"/>
+                            <Button
+                                text="{= ${mappings>/materials/selected/active} === false ? 'Activate' : 'Deactivate' }"
+                                icon="{= ${mappings>/materials/selected/active} === false ? 'sap-icon://activate' : 'sap-icon://decline' }"
+                                type="Transparent"
+                                enabled="{= !!${mappings>/materials/selected} }"
+                                press=".onMappingToggleActive"/>
+                        </OverflowToolbar>
+                        <ScrollContainer horizontal="true" vertical="true" height="26rem" width="100%">
+                            <Table
+                                id="materialsTable"
+                                mode="SingleSelectLeft"
+                                fixedLayout="Strict"
+                                sticky="ColumnHeaders"
+                                selectionChange=".onMappingSelect"
+                                items="{ path: 'mappings>/materials/view', templateShareable: false }"
+                                noDataText="No material mappings maintained.">
+                                <columns>
+                                    <Column width="9rem"><Text text="Sold-to Party"/></Column>
+                                    <Column width="14rem"><Text text="Customer"/></Column>
+                                    <Column width="12rem"><Text text="Customer Material"/></Column>
+                                    <Column width="10rem"><Text text="SAP Material"/></Column>
+                                    <Column width="16rem"><Text text="Description"/></Column>
+                                    <Column width="7rem"><Text text="Status"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{mappings>soldToParty}"/>
+                                            <Text text="{mappings>customerName}"/>
+                                            <Text text="{mappings>customerMaterial}"/>
+                                            <Text text="{mappings>material}"/>
+                                            <Text text="{mappings>description}"/>
+                                            <ObjectStatus
+                                                text="{= ${mappings>active} === false ? 'Inactive' : 'Active' }"
+                                                state="{= ${mappings>active} === false ? 'None' : 'Success' }"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </IconTabFilter>
+
+                    <!-- UoM mappings -->
+                    <IconTabFilter key="uoms" text="UoM Mappings" icon="sap-icon://measure" count="{= ${mappings>/uoms/rows}.length }">
+                        <OverflowToolbar style="Clear">
+                            <Title text="UoM Mappings ({= ${mappings>/uoms/view}.length })" level="H3"/>
+                            <ToolbarSpacer/>
+                            <SearchField width="14rem" value="{mappings>/uoms/query}" liveChange=".onMappingSearch" search=".onMappingSearch"/>
+                            <Button text="Add" icon="sap-icon://add" type="Transparent" press=".onMappingAdd"/>
+                            <Button text="Edit" icon="sap-icon://edit" type="Transparent" enabled="{= !!${mappings>/uoms/selected} }" press=".onMappingEdit"/>
+                        </OverflowToolbar>
+                        <ScrollContainer horizontal="true" vertical="true" height="26rem" width="100%">
+                            <Table
+                                id="uomsTable"
+                                mode="SingleSelectLeft"
+                                fixedLayout="Strict"
+                                sticky="ColumnHeaders"
+                                selectionChange=".onMappingSelect"
+                                items="{ path: 'mappings>/uoms/view', templateShareable: false }"
+                                noDataText="No UoM mappings maintained.">
+                                <columns>
+                                    <Column width="12rem"><Text text="External UoM"/></Column>
+                                    <Column width="10rem"><Text text="SAP Unit"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{mappings>externalUom}"/>
+                                            <Text text="{mappings>sapUnit}"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
+
+        <buttons>
+            <Button
+                id="revalidateOpenOrdersButton"
+                text="Revalidate Open Orders"
+                icon="sap-icon://validate"
+                type="Emphasized"
+                tooltip="Re-run mapping and validation for all orders that are not completed"
+                press=".onRevalidateOpenOrders"/>
+            <Button text="Refresh" icon="sap-icon://refresh" press=".onMappingsRefresh"/>
+            <Button text="Close" press=".onMappingsClose"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

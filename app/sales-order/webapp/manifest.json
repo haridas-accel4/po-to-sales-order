@@ -1,0 +1,46 @@
+{
+  "_version": "1.60.0",
+  "sap.app": {
+    "id": "po2so.salesorder",
+    "type": "application",
+    "title": "PO to Sales Order Automation",
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/sales-order/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.120.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.ui.layout": {},
+        "sap.ui.unified": {}
+      }
+    },
+    "rootView": {
+      "viewName": "po2so.salesorder.view.App",
+      "type": "XML",
+      "id": "app",
+      "async": true
+    },
+    "models": {},
+    "resourceRoots": {
+      "po2so.salesorder": "./"
+    }
+  }
+}

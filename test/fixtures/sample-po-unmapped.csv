@@ -1,0 +1,3 @@
+CustomerPO,PODate,DeliveryDate,Line,CustomerMaterial,Description,Quantity,UoM,UnitPrice
+PO-2027-0003,2027-01-15,2027-02-01,10,ACME-BOLT-10,Hex bolt M10,100,PCS,0.25
+PO-2027-0003,2027-01-15,2027-02-01,20,UNKNOWN-MAT,Mystery part,5,DRUM,

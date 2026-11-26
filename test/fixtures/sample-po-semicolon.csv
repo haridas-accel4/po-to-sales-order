@@ -1,0 +1,2 @@
+CustomerPO;PODate;DeliveryDate;Line;CustomerMaterial;Description;Quantity;UoM;UnitPrice
+PO-2027-0002;15.01.2027;01.02.2027;1;ACME-BOLT-10;"Hex bolt; zinc";50;EA;

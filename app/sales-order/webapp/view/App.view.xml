@@ -1,0 +1,351 @@
+﻿<mvc:View
+    controllerName="po2so.salesorder.controller.App"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:layout="sap.ui.layout"
+    xmlns:unified="sap.ui.unified">
+
+    <App>
+        <Page showHeader="true" enableScrolling="true">
+
+            <customHeader>
+                <OverflowToolbar height="3.5rem">
+                    <Image
+                        id="sapLogo"
+                        src="img/sap-logo.svg"
+                        width="4.5rem"
+                        height="2rem"
+                        decorative="false"
+                        alt="SAP Logo"/>
+                    <ToolbarSeparator/>
+                    <Title text="PO to Sales Order Automation" level="H3"/>
+                    <ToolbarSpacer/>
+                    <Button id="manageMappingsButton"
+                        text="Manage Mappings"
+                        icon="sap-icon://chain-link"
+                        type="Transparent"
+                        tooltip="Maintain customer, material and UoM mappings"
+                        press=".onOpenMappings"/>
+                    <Button icon="sap-icon://refresh"
+                        type="Transparent"
+                        tooltip="Refresh"
+                        press=".onRefresh"/>
+                    <Button icon="sap-icon://action-settings"
+                        type="Transparent"
+                        tooltip="Settings"/>
+                </OverflowToolbar>
+            </customHeader>
+
+            <content>
+                <VBox width="100%" class="sapUiResponsiveContentPadding">
+
+                    <Title
+                        text="Purchase Order Processing"
+                        level="H1"
+                        class="sapUiSmallMarginBottom"/>
+
+                    <Panel expandable="false" class="sapUiNoContentPadding">
+                        <content>
+
+                            <layout:Grid
+                                width="100%"
+                                defaultSpan="XL2 L2 M4 S12"
+                                hSpacing="1"
+                                vSpacing="0">
+
+                                <layout:content>
+                                    <VBox>
+                                        <Label text="Search"/>
+                                        <SearchField
+                                            id="poSearch"
+                                            width="100%"
+                                            value="{filters>/search}"
+                                            placeholder="Search"
+                                            tooltip="Search PO number, file name, customer name, customer ID or sold-to party"
+                                            search=".onSearch"
+                                            liveChange=".onSearch"/>
+                                    </VBox>
+
+                                    <VBox>
+                                        <Label text="Purchase Order"/>
+                                        <Input
+                                            value="{filters>/poNumber}"
+                                            placeholder="Enter PO number"/>
+                                    </VBox>
+
+                                    <VBox>
+                                        <Label text="Customer"/>
+                                        <Input
+                                            value="{filters>/customer}"
+                                            placeholder="Customer name or ID"/>
+                                    </VBox>
+
+                                    <VBox>
+                                        <Label text="Status"/>
+                                        <Select
+                                            selectedKey="{filters>/status}"
+                                            width="100%">
+                                            <core:Item key="" text="All Statuses"/>
+                                            <core:Item key="RECEIVED" text="Received"/>
+                                            <core:Item key="EXTRACTED" text="Extracted"/>
+                                            <core:Item key="VALIDATED" text="Validated"/>
+                                            <core:Item key="NEEDS_REVIEW" text="Needs Review"/>
+                                            <core:Item key="CREATED" text="Created"/>
+                                            <core:Item key="FAILED" text="Failed"/>
+                                        </Select>
+                                    </VBox>
+
+                                    <VBox>
+                                        <Label text="File Type"/>
+                                        <Select
+                                            selectedKey="{filters>/fileType}"
+                                            width="100%">
+                                            <core:Item key="" text="All File Types"/>
+                                            <core:Item key="PDF" text="PDF"/>
+                                            <core:Item key="CSV" text="CSV"/>
+                                            <core:Item key="XLSX" text="Excel"/>
+                                        </Select>
+                                    </VBox>
+
+                                    <VBox>
+                                        <Label text="PO Date From"/>
+                                        <DatePicker
+                                            value="{filters>/dateFrom}"
+                                            valueFormat="yyyy-MM-dd"
+                                            displayFormat="medium"
+                                            width="100%"/>
+                                    </VBox>
+
+                                    <VBox>
+                                        <Label text="PO Date To"/>
+                                        <DatePicker
+                                            value="{filters>/dateTo}"
+                                            valueFormat="yyyy-MM-dd"
+                                            displayFormat="medium"
+                                            width="100%"/>
+                                    </VBox>
+
+                                </layout:content>
+                            </layout:Grid>
+
+                            <OverflowToolbar>
+                                <ToolbarSpacer/>
+                                <Button text="Go"
+                                    type="Emphasized"
+                                    press=".onApplyFilters"/>
+                                <Button text="Clear"
+                                    type="Transparent"
+                                    press=".onClearFilters"/>
+                                <Button text="Adapt Filters"
+                                    type="Transparent"
+                                    icon="sap-icon://filter"/>
+                            </OverflowToolbar>
+
+                        </content>
+                    </Panel>
+
+                    <IconTabBar
+                        id="mainTabs"
+                        expandable="false"
+                        selectedKey="upload"
+                        select=".onTabSelect"
+                        class="sapUiSmallMarginTop">
+
+                        <items>
+                            <IconTabFilter
+                                key="upload"
+                                text="PO Upload"
+                                icon="sap-icon://upload">
+                                <VBox class="sapUiMediumMarginTop">
+
+                                    <Panel id="uploadPanel" headerText="Upload Purchase Order">
+                                        <content>
+                                            <VBox
+                                                alignItems="Center"
+                                                justifyContent="Center"
+                                                class="sapUiLargeMargin"
+                                                width="100%">
+
+                                                <core:Icon
+                                                    src="sap-icon://cloud-upload"
+                                                    size="3rem"
+                                                    color="#0A6ED1"/>
+
+                                                <Title
+                                                    text="Upload Customer Purchase Order"
+                                                    level="H3"
+                                                    class="sapUiSmallMarginTop"/>
+
+                                                <Text
+                                                    text="Select a PDF, CSV or Excel purchase order file."
+                                                    class="sapUiSmallMarginBottom"/>
+
+                                                <VBox width="100%">
+                                                    <Label text="Customer" labelFor="uploadCustomer"/>
+                                                    <Select
+                                                        id="uploadCustomer"
+                                                        width="100%"
+                                                        forceSelection="false"
+                                                        showSecondaryValues="true"
+                                                        selectedKey="{upload>/customerId}"
+                                                        items="{
+                                                            path: 'customers>/customers',
+                                                            templateShareable: false
+                                                        }">
+                                                        <core:ListItem
+                                                            key="{customers>customerId}"
+                                                            text="{customers>customerName}"
+                                                            additionalText="{customers>customerId}"/>
+                                                    </Select>
+                                                    <Text
+                                                        text="Without a customer the PO is extracted but set to Needs Review."
+                                                        class="sapUiTinyMarginBottom"/>
+
+                                                    <Label text="Purchase Order File" labelFor="poFileUploader"/>
+                                                    <unified:FileUploader
+                                                        id="poFileUploader"
+                                                        name="poFile"
+                                                        fileType="pdf,csv,xlsx"
+                                                        maximumFileSize="5"
+                                                        buttonText="Choose PO File"
+                                                        change=".onFileChange"
+                                                        typeMissmatch=".onFileTypeMismatch"
+                                                        fileSizeExceed=".onFileSizeExceed"
+                                                        uploadOnChange="false"
+                                                        sendXHR="false"
+                                                        width="100%"/>
+                                                </VBox>
+
+                                                <Button
+                                                    id="uploadButton"
+                                                    text="Upload"
+                                                    icon="sap-icon://upload"
+                                                    type="Emphasized"
+                                                    enabled="{upload>/canUpload}"
+                                                    press=".onUpload"
+                                                    class="sapUiSmallMarginTop"/>
+
+                                                <Text
+                                                    text="Supported formats: PDF, CSV, XLSX | Maximum size: 5 MB"
+                                                    class="sapUiSmallMarginTop"/>
+                                            </VBox>
+                                        </content>
+                                    </Panel>
+
+                                    <MessageStrip
+                                        id="uploadResult"
+                                        visible="{upload>/result/visible}"
+                                        text="{upload>/result/text}"
+                                        type="{upload>/result/type}"
+                                        showIcon="true"
+                                        showCloseButton="true"
+                                        close=".onUploadResultClose"
+                                        class="sapUiSmallMarginTop"/>
+
+                                    <MessageStrip
+                                        text="Uploaded files will be extracted, validated and reviewed before Sales Order creation."
+                                        type="Information"
+                                        showIcon="true"
+                                        class="sapUiSmallMarginTop"/>
+                                </VBox>
+                            </IconTabFilter>
+
+                            <IconTabFilter
+                                key="processed"
+                                text="Processed POs"
+                                icon="sap-icon://documents"
+                                count="{stats>/processed}"/>
+
+                            <IconTabFilter
+                                key="sales"
+                                text="Sales Orders"
+                                icon="sap-icon://sales-order"
+                                count="{stats>/salesOrders}"/>
+
+                            <IconTabFilter
+                                key="exceptions"
+                                text="Exceptions"
+                                icon="sap-icon://alert"
+                                count="{stats>/exceptions}"/>
+                        </items>
+
+                        <content>
+                            <VBox class="sapUiSmallMarginTop">
+
+                                <OverflowToolbar>
+                                    <Title
+                                        id="tableTitle"
+                                        text="Purchase Order Records (0)"
+                                        level="H3"/>
+                                    <ToolbarSpacer/>
+                                    <Button
+                                        icon="sap-icon://refresh"
+                                        type="Transparent"
+                                        press=".onRefresh"/>
+                                    <Button
+                                        icon="sap-icon://excel-attachment"
+                                        type="Transparent"
+                                        tooltip="Export"/>
+                                    <Button
+                                        icon="sap-icon://action-settings"
+                                        type="Transparent"
+                                        tooltip="Table Settings"/>
+                                </OverflowToolbar>
+
+                                <ScrollContainer
+                                    horizontal="true"
+                                    vertical="true"
+                                    height="32rem"
+                                    width="100%">
+                                <Table
+                                    id="poTable"
+                                    class="sapUiSizeCompact"
+                                    fixedLayout="Strict"
+                                    busyIndicatorDelay="0"
+                                    items="{records>/records}"
+                                    growing="true"
+                                    growingThreshold="50"
+                                    growingScrollToLoad="true"
+                                    sticky="ColumnHeaders"
+                                    noDataText="No purchase order records available. Upload a PO to get started.">
+
+                                    <columns>
+                                        <Column width="12rem"><Text text="File Name"/></Column>
+                                        <Column width="12rem"><Text text="Customer"/></Column>
+                                        <Column width="12rem"><Text text="Purchase Order"/></Column>
+                                        <Column width="10rem"><Text text="PO Date"/></Column>
+                                        <Column width="8rem"><Text text="File Type"/></Column>
+                                        <Column width="10rem"><Text text="Status"/></Column>
+                                        <Column width="12rem"><Text text="Sales Order"/></Column>
+                                        <Column width="12rem"><Text text="Created On"/></Column>
+                                    </columns>
+
+                                    <items>
+                                        <ColumnListItem type="Navigation" press=".onRecordPress">
+                                            <cells>
+                                                <Text text="{records>fileName}"/>
+                                                <Text text="{records>customer}"/>
+                                                <Text text="{records>poNumber}"/>
+                                                <Text text="{records>poDate}"/>
+                                                <Text text="{records>fileType}"/>
+                                                <ObjectStatus
+                                                    text="{records>statusText}"
+                                                    state="{records>statusState}"
+                                                    tooltip="{records>errorMessage}"/>
+                                                <Text text="{records>salesOrder}"/>
+                                                <Text text="{records>createdOn}"/>
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                                </ScrollContainer>
+                            </VBox>
+                        </content>
+                    </IconTabBar>
+
+                </VBox>
+            </content>
+        </Page>
+    </App>
+</mvc:View>

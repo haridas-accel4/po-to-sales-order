@@ -1,0 +1,5 @@
+soldToParty,customerMaterial,material,description,active
+0010100001,ACME-BOLT-10,TG11,Hex bolt M10,true
+0010100001,ACME-NUT-10,TG12,Hex nut M10,true
+0010100001,ACME-WASH-10,TG13,Washer M10,true
+0010100002,GX-1000,TG11,Hex bolt M10,true
