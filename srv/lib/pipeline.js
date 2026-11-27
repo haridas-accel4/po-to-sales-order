@@ -6,7 +6,7 @@ import { extractPurchaseOrder } from './extraction/index.js';
 import { mapCustomer, loadMaterialMap, loadUomMap, mapItems } from './mapping.js';
 import { validateRequiredFields, validateQuantities, validateConfidence, determineStatus, issue } from './validation.js';
 import { connectSalesOrderApi, toSalesOrderPayload, findSalesOrder, createSalesOrder, describeSapError } from './sap-sales-order.js';
-import { notifySalesOrderFailure } from './notifications/index.js';
+import { notifyOrderEvent, notifySalesOrderFailure } from './notifications/index.js';
 
 /**
  * Inbound PO processing pipeline - the single path for every intake channel
@@ -84,8 +84,22 @@ export async function ingestDocument({ source = 'UPLOAD', fileName, mimeType, bu
     LOG.info(`Inbound order ${orderId} received from ${source}: ${fileName}`);
 
     const result = await processInboundOrder(orderId, { buffer, fileType: meta.fileType });
+    if (result.status === 'NEEDS_REVIEW' || result.status === 'FAILED') await notifyIntakeException(orderId, result.status);
     if (result.status === 'VALIDATED' && config.autoPost) return postSalesOrder(orderId);
     return result;
+}
+
+/**
+ * Status e-mails for an order that stopped at intake (the notification module decides who
+ * is told: today only for e-mailed POs). Later review edits do not e-mail again.
+ */
+async function notifyIntakeException(orderId, status) {
+    const { InboundIssues } = db();
+    const errors = await SELECT.from(InboundIssues).columns('code', 'message', 'lineNumber')
+        .where({ parent_ID: orderId, severity: 'ERROR' });
+    const type = status === 'NEEDS_REVIEW' ? 'NEEDS_REVIEW'
+        : errors.some((i) => i.code === 'DUPLICATE_PO') ? 'DUPLICATE_PO' : 'EXTRACTION_FAILED';
+    notifyOrderEvent({ orderId, type, messages: errors.map((i) => (i.lineNumber ? `Line ${i.lineNumber}: ` : '') + i.message) });
 }
 
 /**
@@ -212,8 +226,9 @@ export async function validateInboundOrder(orderId) {
  *   SAP not reachable / not authorized       -> stays VALIDATED with a warning; resubmit later
  *   created                                  -> CREATED with the SAP sales order number
  *
- * Every outcome without a sales order also triggers an exception e-mail
- * (notifySalesOrderFailure: sent after commit, detached, never affects the order).
+ * Every outcome triggers status e-mails: exceptions internally, "created" and the customer
+ * confirmation for e-mailed POs (srv/lib/notifications: sent after commit, detached, never
+ * affects the order).
  */
 export async function postSalesOrder(orderId) {
     const { InboundOrders, InboundItems } = db();
@@ -260,6 +275,7 @@ export async function postSalesOrder(orderId) {
 
     await setStatus(orderId, 'CREATED', `Sales order ${salesOrder} created in SAP`, { salesOrderNumber: salesOrder, errorMessage: null });
     LOG.info(`Inbound order ${orderId}: sales order ${salesOrder} created`);
+    notifyOrderEvent({ orderId, type: 'SO_CREATED', messages: [`Sales order ${salesOrder}`] });
     return summarize(orderId);
 }
 

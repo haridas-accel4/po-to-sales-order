@@ -1,22 +1,34 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import cds from '@sap/cds';
-import { configProblems, getNotificationConfig } from './config.js';
+import { addressOf, configProblems, getNotificationConfig } from './config.js';
 import { composeFailureEmail } from './failure-email.js';
+import { composeConfirmationEmail, composeCreatedEmail, composeUnderReviewEmail } from './status-email.js';
 import { buildMessage } from './mime.js';
 import { isTransientMailError, sendMail } from './smtp-client.js';
 
 /**
- * Exception e-mail when SAP sales order creation fails (pipeline.postSalesOrder).
+ * Status e-mails about inbound orders, so that nobody has to watch the app to learn what
+ * happened to a PO.
  *
- *   notifySalesOrderFailure()  called by the pipeline; never throws, never waits for SMTP
- *     -> after the caller's transaction committed (nothing is sent for a rolled-back failure)
+ *   event                         INTERNAL (SO_FAILURE_EMAIL_TO)   CUSTOMER (sender of an e-mailed PO)
+ *   SAP_REJECTED / SAP_DUPLICATE  exception e-mail (any channel)   "under review"
+ *   SAP_UNAVAILABLE               exception e-mail (configurable)  "under review"
+ *   NEEDS_REVIEW / DUPLICATE_PO   exception e-mail (e-mailed POs)  "under review"
+ *   EXTRACTION_FAILED             exception e-mail (e-mailed POs)  - (the file may not be a PO)
+ *   SO_CREATED                    "created" (e-mailed POs)         order confirmation
+ *
+ * The customer gets "under review" at most once per e-mail, and the confirmation once per
+ * order; both are replies in the thread of the customer's e-mail.
+ *
+ *   notifyOrderEvent()  called by the pipeline; never throws, never waits for SMTP
+ *     -> after the caller's transaction committed (nothing is sent for a rolled-back event)
  *     -> detached: own transactions, the order / HTTP response is never affected
- *   deliver()                  dedup claim (FailureNotifications.dedupKey) -> compose -> send
- *                              with retries -> SENT | SEND_FAILED
+ *   deliverEvent()      plan the e-mails -> per e-mail: dedup claim (FailureNotifications.dedupKey)
+ *                       -> compose -> send with retries -> SENT | SEND_FAILED
  *
- * The same failure of the same order (type + SAP messages) is e-mailed at most once;
- * a SEND_FAILED notification is sent again when that failure occurs the next time.
+ * The same e-mail is sent at most once; a SEND_FAILED one is sent again when its event
+ * occurs the next time.
  */
 
 const LOG = cds.log('notification');
@@ -28,38 +40,49 @@ const inFlight = new Set();
 
 const T = () => cds.entities('po2so');
 
-/** Stable key of one failure: same order + type + SAP messages = same notification. */
+const SAP_EXCEPTIONS = ['SAP_REJECTED', 'SAP_DUPLICATE', 'SAP_UNAVAILABLE'];
+/** Exceptions at intake: only e-mailed for e-mailed POs (an uploader sees the result at once). */
+const INTAKE_EXCEPTIONS = ['EXTRACTION_FAILED', 'NEEDS_REVIEW', 'DUPLICATE_PO'];
+export const EXCEPTION_TYPES = [...SAP_EXCEPTIONS, ...INTAKE_EXCEPTIONS];
+export const ORDER_EVENTS = [...EXCEPTION_TYPES, 'SO_CREATED'];
+
+/** Stable key of one e-mail: same subject (order or e-mail) + type + messages = same notification. */
 export function dedupKeyOf({ orderId, failureType, messages = [] }) {
     const normalized = messages.map((m) => String(m ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean);
     return crypto.createHash('sha256').update(JSON.stringify([orderId, failureType, normalized])).digest('hex');
 }
 
 /**
- * Report a failed sales order creation. Safe to call from inside the pipeline:
+ * Report an event of an inbound order. Safe to call from inside the pipeline:
  * returns immediately and never throws.
  *
- * @param {{orderId:string, failureType:'SAP_REJECTED'|'SAP_DUPLICATE'|'SAP_UNAVAILABLE', messages:string[], httpStatus?:number|null}} failure
+ * @param {{orderId:string, type:string, messages?:string[], httpStatus?:number|null}} event  type: one of ORDER_EVENTS
  */
-export function notifySalesOrderFailure({ orderId, failureType, messages = [], httpStatus = null }) {
+export function notifyOrderEvent({ orderId, type, messages = [], httpStatus = null }) {
     try {
         const config = getNotificationConfig();
         if (!config.enabled) return;
-        if (failureType === 'SAP_UNAVAILABLE' && !config.notifyOnSapUnavailable) return;
+        if (!ORDER_EVENTS.includes(type)) throw new Error(`Unknown notification event ${type}`);
 
-        const failure = { orderId, failureType, messages: [...messages], httpStatus: httpStatus ?? null, failedAt: new Date().toISOString() };
-        const start = () => track(runDetached(() => deliver(failure)), orderId);
+        const event = { orderId, type, messages: [...messages], httpStatus: httpStatus ?? null, at: new Date().toISOString() };
+        const start = () => track(runDetached(() => deliverEvent(event)), orderId);
         const ctx = cds.context;
-        // only once the failure is committed; a rollback discards the notification
+        // only once the event is committed; a rollback discards the notification
         if (ctx?.tx) ctx.on('succeeded', start);
         else start();
     } catch (e) {
-        LOG.error(`Inbound order ${orderId}: failure notification could not be scheduled:`, e);
+        LOG.error(`Inbound order ${orderId}: notification could not be scheduled:`, e);
     }
+}
+
+/** Failed sales order creation (kept for callers of the first version). */
+export function notifySalesOrderFailure({ orderId, failureType, messages = [], httpStatus = null }) {
+    notifyOrderEvent({ orderId, type: failureType, messages, httpStatus });
 }
 
 function track(promise, orderId) {
     const p = Promise.resolve(promise)
-        .catch((e) => LOG.error(`Inbound order ${orderId}: failure notification error:`, e))
+        .catch((e) => LOG.error(`Inbound order ${orderId}: notification error:`, e))
         .finally(() => inFlight.delete(p));
     inFlight.add(p);
 }
@@ -73,43 +96,138 @@ export async function whenIdle() {
 const errorText = (e) => `${e?.message ?? e}`.slice(0, 1000);
 
 /**
- * Claim, compose and send the e-mail for one failure.
- * @returns {Promise<'sent'|'send_failed'|'duplicate'|'not_configured'>}
+ * Customer address for an e-mailed PO: the sender, unless customer e-mails are off or the
+ * sender is this application itself (the polled mailbox or the sending address).
+ * @returns {{address:string|null, reason:string|null}}
  */
-export async function deliver(failure) {
+export function customerRecipient({ order, email }, config) {
+    if (order.source !== 'EMAIL') return { address: null, reason: null };
+    if (!config.customerEmails) return { address: null, reason: 'customer e-mails are switched off' };
+    const address = addressOf(email?.sender);
+    if (!address) return { address: null, reason: 'no valid sender address' };
+    const own = [email?.mailbox, addressOf(config.from)].filter(Boolean).map((a) => a.toLowerCase());
+    if (own.includes(address.toLowerCase())) return { address: null, reason: 'the PO was sent from this application\'s own mailbox' };
+    return { address, reason: null };
+}
+
+/**
+ * Which e-mails an event causes. Pure: no I/O.
+ * @returns {Array<{type:string, audience:'INTERNAL'|'CUSTOMER', recipients:string[], dedupKey:string}>}
+ */
+export function planEmails(event, details, config) {
+    const { order, email } = details;
+    const fromEmail = order.source === 'EMAIL';
+    const plans = [];
+    const customer = customerRecipient(details, config).address;
+
+    if (customer && EXCEPTION_TYPES.includes(event.type) && event.type !== 'EXTRACTION_FAILED') {
+        plans.push({ type: 'UNDER_REVIEW', audience: 'CUSTOMER', recipients: [customer],
+            dedupKey: dedupKeyOf({ orderId: email.ID, failureType: 'UNDER_REVIEW' }) });
+    }
+    if (customer && event.type === 'SO_CREATED') {
+        plans.push({ type: 'ORDER_CONFIRMED', audience: 'CUSTOMER', recipients: [customer],
+            dedupKey: dedupKeyOf({ orderId: order.ID, failureType: 'ORDER_CONFIRMED' }) });
+    }
+
+    const internalException = SAP_EXCEPTIONS.includes(event.type) || (INTAKE_EXCEPTIONS.includes(event.type) && fromEmail);
+    if (internalException && !(event.type === 'SAP_UNAVAILABLE' && !config.notifyOnSapUnavailable)) {
+        plans.push({ type: event.type, audience: 'INTERNAL', recipients: config.recipients,
+            dedupKey: dedupKeyOf({ orderId: order.ID, failureType: event.type, messages: event.messages }) });
+    }
+    if (event.type === 'SO_CREATED' && fromEmail && config.notifyOnCreated && config.createdRecipients.length) {
+        plans.push({ type: 'SO_CREATED', audience: 'INTERNAL', recipients: config.createdRecipients,
+            dedupKey: dedupKeyOf({ orderId: order.ID, failureType: 'SO_CREATED' }) });
+    }
+    return plans;
+}
+
+/** One line for the internal e-mail: what the customer was (or was not) told. */
+function customerNotice(event, details, config, plans, results) {
+    if (details.order.source !== 'EMAIL') return null;
+    const plan = plans.find((p) => p.audience === 'CUSTOMER');
+    if (!plan) {
+        if (event.type === 'EXTRACTION_FAILED') return 'Not contacted - the file may not be a purchase order';
+        return `Not contacted - ${customerRecipient(details, config).reason ?? 'not applicable'}`;
+    }
+    const what = plan.type === 'ORDER_CONFIRMED' ? 'Order confirmation' : '"Under review" e-mail';
+    const to = plan.recipients.join(', ');
+    switch (results[plan.type]) {
+        case 'sent': return `${what} sent to ${to}`;
+        case 'duplicate': return `${what} already sent to ${to} earlier`;
+        default: return `${what} to ${to} could not be sent (see the log)`;
+    }
+}
+
+/**
+ * Plan, claim, compose and send the e-mails of one event (customer first, so the internal
+ * e-mail can say whether the customer was told).
+ * @returns {Promise<Record<string, 'sent'|'send_failed'|'duplicate'>|'not_configured'>}
+ */
+export async function deliverEvent(event) {
     const config = getNotificationConfig();
     const problems = configProblems(config);
     if (problems.length) {
-        LOG.warn(`Inbound order ${failure.orderId}: sales order failure e-mail not sent - e-mail sending is not configured (${problems.join('; ')}).`);
+        LOG.warn(`Inbound order ${event.orderId}: ${event.type} e-mail not sent - e-mail sending is not configured (${problems.join('; ')}).`);
         return 'not_configured';
     }
 
-    const details = await cds.tx(() => loadDetails(failure.orderId));
-    const dedupKey = dedupKeyOf(failure);
-    const claim = await claimNotification(dedupKey, failure, details, config);
+    const details = await cds.tx(() => loadDetails(event.orderId));
+    const plans = planEmails(event, details, config);
+    const results = {};
+    for (const plan of plans.filter((p) => p.audience === 'CUSTOMER')) {
+        results[plan.type] = await deliverOne(plan, event, details, config);
+    }
+    const notice = customerNotice(event, details, config, plans, results);
+    for (const plan of plans.filter((p) => p.audience === 'INTERNAL')) {
+        results[plan.type] = await deliverOne(plan, event, details, config, notice);
+    }
+    return results;
+}
+
+function compose(plan, event, details, config, notice) {
+    switch (plan.type) {
+        case 'UNDER_REVIEW': return composeUnderReviewEmail({ ...details, signature: config.customerSignature });
+        case 'ORDER_CONFIRMED': return composeConfirmationEmail({ ...details, signature: config.customerSignature });
+        case 'SO_CREATED': return composeCreatedEmail({ ...details, createdAt: event.at, customerNotice: notice });
+        default: return composeFailureEmail({
+            ...details, customerNotice: notice,
+            failure: { failureType: plan.type, messages: event.messages, httpStatus: event.httpStatus, failedAt: event.at },
+        });
+    }
+}
+
+/** @returns {Promise<'sent'|'send_failed'|'duplicate'>} */
+async function deliverOne(plan, event, details, config, notice = null) {
+    const label = `Inbound order ${event.orderId}: ${plan.type} e-mail`;
+    const claim = await claimNotification(plan, event, details);
     if (!claim) {
-        LOG.info(`Inbound order ${failure.orderId}: ${failure.failureType} already notified - duplicate e-mail suppressed.`);
+        LOG.info(`${label} already sent - duplicate e-mail suppressed.`);
         return 'duplicate';
     }
 
     const { FailureNotifications } = T();
     let attempts = claim.attempts ?? 0;
     try {
-        const content = composeFailureEmail({ ...details, failure });
-        const message = buildMessage({ from: config.from, to: config.recipients, ...content });
+        const content = compose(plan, event, details, config, notice);
+        const toCustomer = plan.audience === 'CUSTOMER';
+        const message = buildMessage({
+            from: config.from, to: plan.recipients, ...content,
+            replyTo: toCustomer ? config.customerReplyTo : null,
+            inReplyTo: toCustomer ? details.email?.rfcMessageId : null,
+        });
         const { response } = await withRetry(() => {
             attempts++;
             return sendMail({ ...config.smtp, timeoutMs: config.timeoutMs }, { ...message.envelope, raw: message.raw });
-        }, config.retry, (e, delay) => LOG.warn(`Inbound order ${failure.orderId}: failure e-mail attempt ${attempts} failed (${errorText(e)}); retrying in ${delay} ms.`));
+        }, config.retry, (e, delay) => LOG.warn(`${label} attempt ${attempts} failed (${errorText(e)}); retrying in ${delay} ms.`));
 
         await cds.tx(() => UPDATE(FailureNotifications, claim.ID).with({
             status: 'SENT', attempts, sentAt: new Date().toISOString(), smtpResponse: response, lastError: null,
         }));
-        LOG.info(`Inbound order ${failure.orderId}: ${failure.failureType} e-mail sent to ${config.recipients.join(', ')}.`);
+        LOG.info(`${label} sent to ${plan.recipients.join(', ')}.`);
         return 'sent';
     } catch (e) {
         await cds.tx(() => UPDATE(FailureNotifications, claim.ID).with({ status: 'SEND_FAILED', attempts, lastError: errorText(e) }));
-        LOG.error(`Inbound order ${failure.orderId}: failure e-mail could not be sent after ${attempts} attempt(s): ${errorText(e)}`);
+        LOG.error(`${label} could not be sent after ${attempts} attempt(s): ${errorText(e)}`);
         return 'send_failed';
     }
 }
@@ -124,7 +242,7 @@ async function loadDetails(orderId) {
         ? await SELECT.one.from(EmailAttachments).columns('message_ID').where({ inboundOrder_ID: orderId })
         : null;
     const email = attachment?.message_ID
-        ? await SELECT.one.from(EmailMessages, attachment.message_ID).columns('sender', 'subject', 'receivedAt')
+        ? await SELECT.one.from(EmailMessages, attachment.message_ID).columns('ID', 'mailbox', 'sender', 'subject', 'receivedAt', 'rfcMessageId')
         : null;
     return { order, customer: customer ?? null, items, email: email ?? null };
 }
@@ -132,25 +250,27 @@ async function loadDetails(orderId) {
 const isUniqueViolation = (e) => /unique constraint|UNIQUE_CONSTRAINT|ENTITY_ALREADY_EXISTS/i.test(`${e?.code ?? ''} ${e?.message ?? ''}`);
 
 /**
- * Reserve the notification for this failure.
- * New failure -> new PENDING row. Already SENT or being sent -> null (duplicate).
+ * Reserve one e-mail.
+ * New -> new PENDING row. Already SENT or being sent -> null (duplicate).
  * SEND_FAILED (or PENDING left behind by a stopped process) -> taken over atomically.
  */
-async function claimNotification(dedupKey, failure, { order, customer }, config) {
+async function claimNotification(plan, event, { order, customer }) {
     const { FailureNotifications } = T();
+    const config = getNotificationConfig();
     const data = {
-        failureType: failure.failureType,
+        failureType: plan.type,
+        audience: plan.audience,
         customerPoNumber: order.customerPoNumber,
         customerName: customer?.customerName ?? null,
         soldToParty: order.soldToParty ?? customer?.soldToParty ?? null,
-        failureMessage: failure.messages.join('\n').slice(0, 1000) || null,
-        failedAt: failure.failedAt,
-        recipients: config.recipients.join(', ').slice(0, 1000),
+        failureMessage: event.messages.join('\n').slice(0, 1000) || null,
+        failedAt: event.at,
+        recipients: plan.recipients.join(', ').slice(0, 1000),
         status: 'PENDING',
     };
     const ID = cds.utils.uuid();
     try {
-        await cds.tx(() => INSERT.into(FailureNotifications).entries({ ID, dedupKey, inboundOrder_ID: order.ID, attempts: 0, ...data }));
+        await cds.tx(() => INSERT.into(FailureNotifications).entries({ ID, dedupKey: plan.dedupKey, inboundOrder_ID: order.ID, attempts: 0, ...data }));
         return { ID, attempts: 0 };
     } catch (e) {
         if (!isUniqueViolation(e)) throw e;
@@ -158,7 +278,7 @@ async function claimNotification(dedupKey, failure, { order, customer }, config)
 
     const staleBefore = new Date(Date.now() - config.stalePendingMinutes * 60_000).toISOString();
     return cds.tx(async () => {
-        const existing = await SELECT.one.from(FailureNotifications).columns('ID', 'status', 'attempts').where({ dedupKey });
+        const existing = await SELECT.one.from(FailureNotifications).columns('ID', 'status', 'attempts').where({ dedupKey: plan.dedupKey });
         if (!existing || existing.status === 'SENT') return null;
         const where = existing.status === 'PENDING'
             ? { ID: existing.ID, status: 'PENDING', modifiedAt: { '<': staleBefore } }

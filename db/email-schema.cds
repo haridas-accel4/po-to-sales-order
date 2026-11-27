@@ -34,7 +34,9 @@ entity EmailMessages : cuid, managed {
     mailbox              : String(320) not null;
     gmailMessageId       : String(64) not null;
     threadId             : String(64);
-    sender               : String(320);
+    /** RFC 5322 Message-ID header: status e-mails to the sender reply in this thread */
+    rfcMessageId         : String(500);
+    sender              : String(320);
     subject              : String(500);
     receivedAt           : Timestamp;
     status               : EmailMessageStatus;

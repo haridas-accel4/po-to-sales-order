@@ -58,8 +58,8 @@ export function getNotificationConfig() {
     const secure = bool(env.SMTP_SECURE, false);
     const port = Number(env.SMTP_PORT || (secure ? 465 : 587));
     const user = env.SMTP_USER || '';
-    const recipients = String(env.SO_FAILURE_EMAIL_TO || DEFAULT_RECIPIENT)
-        .split(/[,;]/).map((r) => r.trim()).filter(Boolean);
+    const list = (value) => String(value).split(/[,;]/).map((r) => r.trim()).filter(Boolean);
+    const recipients = list(env.SO_FAILURE_EMAIL_TO || DEFAULT_RECIPIENT);
 
     return {
         ...DEFAULTS,
@@ -67,6 +67,14 @@ export function getNotificationConfig() {
         retry: { ...DEFAULTS.retry, ...(cdsCfg.retry ?? {}) },
         enabled: (!underTest || sendingInTests) && bool(env.SO_FAILURE_EMAIL_ENABLED, cdsCfg.enabled ?? true),
         recipients,
+        /** Internal "sales order created" e-mail for e-mailed POs (default: the exception recipients). */
+        createdRecipients: env.SO_CREATED_EMAIL_TO ? list(env.SO_CREATED_EMAIL_TO) : recipients,
+        notifyOnCreated: bool(env.SO_CREATED_EMAIL_ENABLED, cdsCfg.notifyOnCreated ?? true),
+        /** "Under review" and order confirmation replies to the sender of an e-mailed PO. */
+        customerEmails: bool(env.PO_CUSTOMER_EMAIL_ENABLED, cdsCfg.customerEmails ?? true),
+        /** Where customer answers go (e.g. the order desk); default: the sender address. */
+        customerReplyTo: (env.PO_CUSTOMER_EMAIL_REPLY_TO || '').trim() || null,
+        customerSignature: (env.PO_CUSTOMER_EMAIL_SIGNATURE || cdsCfg.customerSignature || 'Customer Service').trim(),
         // a mailbox login is usually also the allowed sender
         from: (env.SO_FAILURE_EMAIL_FROM || (addressOf(user) ? user : '')).trim(),
         smtp: {
@@ -89,6 +97,9 @@ export function configProblems(config = getNotificationConfig()) {
     if (!config.recipients.length) problems.push('SO_FAILURE_EMAIL_TO has no recipient');
     const invalid = config.recipients.filter((r) => !addressOf(r) || addressOf(r) !== r);
     if (invalid.length) problems.push(`SO_FAILURE_EMAIL_TO contains invalid address(es): ${invalid.join(', ')}`);
+    const invalidCreated = (config.createdRecipients ?? []).filter((r) => !addressOf(r) || addressOf(r) !== r);
+    if (invalidCreated.length) problems.push(`SO_CREATED_EMAIL_TO contains invalid address(es): ${invalidCreated.join(', ')}`);
+    if (config.customerReplyTo && !addressOf(config.customerReplyTo)) problems.push('PO_CUSTOMER_EMAIL_REPLY_TO is not a valid e-mail address');
     if (config.smtp.user && !config.smtp.password) problems.push('SMTP_PASSWORD is not set for SMTP_USER');
     return problems;
 }

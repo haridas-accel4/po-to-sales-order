@@ -20,7 +20,7 @@ export function createFakeGmail({ emailAddress = 'po-inbox@example.com' } = {}) 
     let listDelayMs = 0;
 
     /**
-     * @param {{id?, subject?, from?, text?, html?, receivedAt?:number,
+     * @param {{id?, subject?, from?, messageId?, text?, html?, receivedAt?:number,
      *          attachments?: Array<{fileName, mimeType, content:Buffer|string, inline?:boolean}>}} m
      */
     function addMessage(m) {
@@ -49,6 +49,7 @@ export function createFakeGmail({ emailAddress = 'po-inbox@example.com' } = {}) 
                     headers: [
                         { name: 'From', value: m.from ?? 'Buyer <buyer@customer.example>' },
                         { name: 'Subject', value: m.subject ?? '' },
+                        { name: 'Message-ID', value: m.messageId ?? `<${id}@mail.customer.example>` },
                     ],
                 },
             },
