@@ -75,9 +75,22 @@ describe('CSV extraction', () => {
     test('rejects missing required values', () => {
         assert.throws(() => extractCsv(csv(`${HEADER}\n,,,,,,,,5\n`)), (e) => {
             const fields = e.details.map((d) => d.field);
-            for (const f of ['CustomerPO', 'PODate', 'Line', 'CustomerMaterial', 'Quantity', 'UoM']) assert.ok(fields.includes(f), f);
+            for (const f of ['CustomerPO', 'PODate', 'Line', 'CustomerMaterial', 'Quantity']) assert.ok(fields.includes(f), f);
+            assert.ok(!fields.includes('UoM'), 'UoM is optional');
             return true;
         });
+    });
+
+    test('UoM is optional (SAP then uses the material master unit)', () => {
+        const po = extractCsv(csv(`${HEADER}\nP1,2027-01-01,,1,A,,1,,\n`));
+        assert.equal(po.items[0].uom, null);
+    });
+
+    test('accepts dates with an English month name, as SAP prints them', () => {
+        const po = extractCsv(csv(`${HEADER}\nP1,"Mar 6, 2026",16 March 2026,1,A,,1,EA,\n`));
+        assert.deepEqual(po.header, { customerPoNumber: 'P1', poDate: '2026-03-06', requestedDeliveryDate: '2026-03-16' });
+        assert.throws(() => extractCsv(csv(`${HEADER}\nP1,Feb 30 2026,,1,A,,1,EA,\n`)), (e) =>
+            e.details.some((d) => d.field === 'PODate' && /Mar 6, 2026/.test(d.message)));
     });
 
     test('rejects header-only, empty, malformed and non-UTF-8 files', () => {

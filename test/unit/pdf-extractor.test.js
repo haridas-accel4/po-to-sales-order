@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { extractPdf } from '../../srv/lib/extraction/pdf-extractor.js';
 import { extractPdfTemplate } from '../../srv/lib/extraction/pdf-template-extractor.js';
 import { ExtractionError, ExtractionNotConfiguredError } from '../../srv/lib/errors.js';
-import { makePdf, templatePages } from '../support/make-pdf.js';
+import { makePdf, templatePages, sapFormPages } from '../support/make-pdf.js';
 
 const fixture = (n) => readFileSync(new URL(`../fixtures/${n}`, import.meta.url));
 const HEADER = { 'Customer PO': 'PO-1', 'PO Date': '2027-01-15' };
@@ -97,7 +97,7 @@ describe('PDF template extraction', () => {
         let e = await rejects(extractPdfTemplate(makePdf([[{ x: 50, y: 800, text: 'Dear customer, thank you.' }]])), 'INVALID_TEMPLATE');
         assert.match(e.message, /No item table found/);
 
-        e = await rejects(extractPdfTemplate(pdf({ columns: ['Line', 'Customer Material', 'Description', 'Qty', 'UoM', 'Unit Price'] })), 'INVALID_TEMPLATE');
+        e = await rejects(extractPdfTemplate(pdf({ columns: ['Line', 'Customer Material', 'Description', 'Amount', 'UoM', 'Unit Price'] })), 'INVALID_TEMPLATE');
         assert.match(e.message, /Required column 'Quantity' is missing/);
         assert.deepEqual(e.details.map((d) => d.field), ['Quantity']);
     });
@@ -125,6 +125,54 @@ describe('PDF template extraction', () => {
         await rejects(extractPdfTemplate(pdf({ rows: [] })), 'NO_ITEMS');
         await rejects(extractPdfTemplate(fixture('sample-po.pdf')), 'INVALID_PDF');
         await rejects(extractPdfTemplate(Buffer.from('%PDF-1.4\ngarbage')), 'INVALID_PDF');
+    });
+
+    test('reads the standard SAP purchase order form', async () => {
+        const po = await extractPdfTemplate(makePdf(sapFormPages({
+            po: '4500000227', created: 'Mar 6, 2026', total: '13.00 USD',
+            items: [{ item: '00010', id: 'TG11', description: 'ClickPad', quantity: '1 PC', date: 'Mar 16, 2026', price: '13.00 USD', per: 'per 1 PC' }],
+        })));
+        assert.deepEqual(po.header, { customerPoNumber: '4500000227', poDate: '2026-03-06', requestedDeliveryDate: '2026-03-16', currency: 'USD' });
+        assert.deepEqual(po.items, [{
+            lineNumber: 10, customerMaterial: 'TG11', description: 'ClickPad', quantity: 1, uom: 'PC', unitPrice: 13,
+            requestedDeliveryDate: '2026-03-16', priceUnit: 1,
+        }]);
+    });
+
+    test('SAP form: several items, thousands separators, price units, wrapped text, item dates', async () => {
+        const po = await extractPdfTemplate(makePdf(sapFormPages({
+            po: '4500000300', created: 'March 2, 2026',
+            items: [
+                { item: '00010', id: 'TG11', description: 'ClickPad', more: 'black, wireless', quantity: '1,000 PC', date: 'Mar 20, 2026', price: '1,234.50 USD', per: 'per 100 PC', value: '12,345.00 USD' },
+                { item: '00020', id: 'TG12', description: 'Cable', quantity: '2.5 KG', date: 'Mar 16, 2026', price: '7.10 USD', per: 'per 1 KG' },
+            ],
+        })));
+        // no order-level date on the form: the earliest item date
+        assert.deepEqual(po.header, { customerPoNumber: '4500000300', poDate: '2026-03-02', requestedDeliveryDate: '2026-03-16', currency: 'USD' });
+        assert.deepEqual(po.items.map((i) => [i.lineNumber, i.customerMaterial, i.description, i.quantity, i.uom, i.unitPrice, i.priceUnit, i.requestedDeliveryDate]), [
+            [10, 'TG11', 'ClickPad black, wireless', 1000, 'PC', 1234.5, 100, '2026-03-20'],
+            [20, 'TG12', 'Cable', 2.5, 'KG', 7.1, 1, '2026-03-16'],
+        ]);
+    });
+
+    test('SAP form with German number format', async () => {
+        const po = await extractPdfTemplate(makePdf(sapFormPages({
+            po: '4500000301', created: '02.03.2026',
+            items: [{ item: '00010', id: 'TG11', description: 'Maus', quantity: '1.000 ST', date: '16.03.2026', price: '1.234,50 EUR', per: 'per 1 ST' }],
+        })));
+        assert.equal(po.header.currency, 'EUR');
+        assert.deepEqual([po.items[0].quantity, po.items[0].uom, po.items[0].unitPrice], [1000, 'ST', 1234.5]);
+    });
+
+    test('SAP form: rejects items in different currencies', async () => {
+        const e = await rejects(extractPdfTemplate(makePdf(sapFormPages({
+            po: '4500000302', created: 'Mar 2, 2026',
+            items: [
+                { item: '00010', id: 'TG11', description: 'A', quantity: '1 PC', date: 'Mar 16, 2026', price: '13.00 USD' },
+                { item: '00020', id: 'TG12', description: 'B', quantity: '1 PC', date: 'Mar 16, 2026', price: '13.00 EUR' },
+            ],
+        }))), 'INVALID_DATA');
+        assert.match(e.message, /different currencies \(USD, EUR\)/);
     });
 
     test('provider none / not implemented -> not configured', async () => {

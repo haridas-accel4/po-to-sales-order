@@ -20,7 +20,7 @@ describe('Validation rules', () => {
         assert.deepEqual(codes(validateRequiredFields({ ...header, requestedDeliveryDate: '2026-12-31' }, [item()])),
             ['ERROR:INVALID_DELIVERY_DATE']);
         assert.deepEqual(codes(validateRequiredFields(header, [item(), item({ customerMaterial: null, customerUom: '' })])),
-            ['ERROR:DUPLICATE_LINE', 'ERROR:REQUIRED_FIELD', 'ERROR:REQUIRED_FIELD']);
+            ['ERROR:DUPLICATE_LINE', 'ERROR:REQUIRED_FIELD', 'WARNING:NO_UOM']);
     });
 
     test('warnings alone do not block', () => {
@@ -58,8 +58,10 @@ describe('Validation rules', () => {
     });
 
     test('item delivery date and price unit', () => {
-        assert.deepEqual(validateRequiredFields(header, [item({ requestedDeliveryDate: '2027-01-01', priceUnit: 100 })]), []);
+        assert.deepEqual(validateRequiredFields(header, [item({ requestedDeliveryDate: '2027-01-10', priceUnit: 100 })]), []);
         assert.deepEqual(validateRequiredFields(header, [item({ requestedDeliveryDate: null, priceUnit: null })]), []);
+        // only the order's date reaches SAP: a different item date is reported
+        assert.deepEqual(codes(validateRequiredFields(header, [item({ requestedDeliveryDate: '2027-01-01' })])), ['WARNING:ITEM_DELIVERY_DATE']);
         const issues = validateRequiredFields(header, [item({ requestedDeliveryDate: '2026-12-31' }), item({ lineNumber: 20, priceUnit: 0 }), item({ lineNumber: 30, priceUnit: 1.5 })]);
         assert.deepEqual(codes(issues), ['ERROR:INVALID_DELIVERY_DATE', 'ERROR:INVALID_PRICE_UNIT', 'ERROR:INVALID_PRICE_UNIT']);
         assert.deepEqual(issues.map((i) => i.lineNumber), [10, 20, 30]);

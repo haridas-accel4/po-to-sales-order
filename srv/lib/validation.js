@@ -35,10 +35,17 @@ export function validateRequiredFields(header, items) {
             issues.push(issue('ERROR', 'DUPLICATE_LINE', `Line number ${lineNumber} is used more than once.`, { field: 'lineNumber', lineNumber }));
         } else seen.add(lineNumber);
         if (!it.customerMaterial) issues.push(issue('ERROR', 'REQUIRED_FIELD', 'Customer material is missing.', { field: 'customerMaterial', lineNumber }));
-        if (!it.customerUom) issues.push(issue('ERROR', 'REQUIRED_FIELD', 'Unit of measure is missing.', { field: 'customerUom', lineNumber }));
+        if (!it.customerUom) {
+            issues.push(issue('WARNING', 'NO_UOM', 'No unit of measure on the PO; SAP uses the unit from the material master.', { field: 'customerUom', lineNumber }));
+        }
         if (it.requestedDeliveryDate && header?.poDate && it.requestedDeliveryDate < header.poDate) {
             issues.push(issue('ERROR', 'INVALID_DELIVERY_DATE',
                 `Requested delivery date ${it.requestedDeliveryDate} is before the PO date ${header.poDate}.`, { field: 'requestedDeliveryDate', lineNumber }));
+        } else if (it.requestedDeliveryDate && header?.requestedDeliveryDate && it.requestedDeliveryDate !== header.requestedDeliveryDate) {
+            // only the order's date is sent: SAP ignores schedule-line dates on create
+            issues.push(issue('WARNING', 'ITEM_DELIVERY_DATE',
+                `The item requests delivery on ${it.requestedDeliveryDate}; the sales order uses the order's requested delivery date ${header.requestedDeliveryDate}.`,
+                { field: 'requestedDeliveryDate', lineNumber }));
         }
         if (it.priceUnit !== null && it.priceUnit !== undefined && !(Number.isInteger(Number(it.priceUnit)) && Number(it.priceUnit) > 0)) {
             issues.push(issue('ERROR', 'INVALID_PRICE_UNIT', `Price unit must be a positive whole number (got ${it.priceUnit}).`, { field: 'priceUnit', lineNumber }));

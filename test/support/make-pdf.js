@@ -87,3 +87,57 @@ export function templatePages({
     }
     return pages;
 }
+
+/**
+ * Lay out a purchase order like the standard SAP purchase order form (positions taken from a
+ * real SAP S/4HANA PO PDF): title, address and labelled info block, ship-to address, and an item
+ * table  Item | ID | Description | Quantity | Delivery Date / Service Period | Net Price | Net Value
+ * with the price unit ('per 1 PC') below the price, schedule lines below each item and the
+ * Incoterms at the end. Returns the pages for makePdf().
+ *
+ * @param {{po:string, created:string, items:Array<{item:string, id:string, description:string,
+ *          quantity:string, date:string, price:string, per?:string, value?:string, more?:string}>,
+ *          total?:string}} order  `more` = wrapped second description line
+ */
+export function sapFormPages({ po, created, items, total = '' }) {
+    const t = [
+        { x: 56.7, y: 760.6, text: `Purchase Order: ${po}`, size: 18 },
+        { x: 70.9, y: 692.9, text: 'Unternehmen' },
+        { x: 70.9, y: 680.1, text: 'Werk 1010 als Geschaeftspartner' },
+        { x: 70.9, y: 667.4, text: 'Dietmar-Hopp-Alle 1' },
+        { x: 70.9, y: 654.6, text: '69190 WALLDORF' },
+        { x: 70.9, y: 641.8, text: 'GERMANY' },
+    ];
+    const info = [['Purchase Order:', po], ['Created on:', created], ['Contact Person:', 'Group 002'], ['Phone:', '331'],
+        ['Fax:', '770 840 9000'], ['E-Mail:', 'a'], ['Supplier ID:', '0010411010'], ['VAT No.:', 'DE154512324']];
+    info.forEach(([label, value], i) => {
+        t.push({ x: 314.6, y: 686.9 - 14.15 * i, text: label }, { x: 413.9, y: 686.9 - 14.15 * i, text: value });
+    });
+    ['Ship-to Address:', 'Receiving and Sorting', 'Deer Creek', 'PALO ALTO CA  94304-1355', 'USA']
+        .forEach((text, i) => t.push({ x: 56.7, y: 565 - 14.15 * i, text }));
+
+    const head = [[59.5, 'Item'], [93.5, 'ID'], [150.2, 'Description'], [295.1, 'Quantity'],
+        [343.3, 'Delivery Date /'], [440, 'Net Price'], [511.7, 'Net Value']];
+    for (const [x, text] of head) t.push({ x, y: 477.9, text, size: 9 });
+    t.push({ x: 342.8, y: 467.5, text: 'Service Period', size: 9 });
+
+    let y = 452.7;
+    for (const it of items) {
+        // right-aligned cells end at the column's right edge (approximate Helvetica widths at 10pt)
+        const width = (text) => [...text].reduce((w, ch) =>
+            w + (/[\d]/.test(ch) ? 5.56 : /[.,: ]/.test(ch) ? 2.78 : /[A-Z]/.test(ch) ? 6.67 : 5), 0);
+        const right = (end, text) => end - width(text);
+        t.push({ x: 59.5, y, text: it.item }, { x: 93.5, y, text: it.id }, { x: 150.2, y, text: it.description },
+            { x: right(331.6, it.quantity), y, text: it.quantity }, { x: 346.4, y, text: it.date },
+            { x: right(479, it.price), y, text: it.price }, { x: right(552.7, it.value ?? it.price), y, text: it.value ?? it.price });
+        if (it.per) t.push({ x: 439.6, y: y - 11.4, text: it.per });
+        if (it.more) t.push({ x: 150.2, y: y - 11.4, text: it.more });
+        t.push({ x: 263.6, y: y - 25.7, text: 'Schedule Lines:', size: 9 },
+            { x: right(331.6, it.quantity), y: y - 37, text: it.quantity, size: 9 }, { x: 352.3, y: y - 37, text: it.date, size: 9 });
+        y -= 55;
+    }
+    t.push({ x: 93.5, y, text: 'Incoterms:', size: 9 }, { x: 139.6, y, text: 'EXW (Ex Works); Berlin', size: 9 });
+    t.push({ x: 382.7, y: y - 55, text: 'Total Value:' }, { x: 484.7, y: y - 55, text: total });
+    t.push({ x: 453.1, y: 73.4, text: 'Test Copy', size: 30 });
+    return [t];
+}
