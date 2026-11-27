@@ -154,3 +154,13 @@ describe('Sales order creation in SAP', () => {
         assert.equal((await sapOrders({ PurchaseOrderByCustomer: 'PO-FINAL-1' })).length, 1);
     });
 });
+
+describe('SAP connection status', () => {
+    test('sapStatus() reports the local mock as connected', async () => {
+        const { data } = await GET(`${SRV}/sapStatus()`);
+        assert.equal(data.mode, 'mock');
+        assert.equal(data.connected, true, data.message);
+        assert.match(data.message, /local mock/);
+        assert.ok(data.checkedAt);
+    });
+});

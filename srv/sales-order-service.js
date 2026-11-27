@@ -5,6 +5,7 @@ import { invalidDates, protectedFieldsIn, PROTECTED_ORDER_FIELDS, PROTECTED_ITEM
 import { ingestDocument, processInboundOrder, validateInboundOrder, postSalesOrder, FINAL_STATUSES } from './lib/pipeline.js';
 import { MAPPING_RULES, trimTextFields, missingRequired, sameKey, conflictMessage } from './lib/mapping-validation.js';
 import * as gmail from './lib/gmail/index.js';
+import { checkSapConnection } from './lib/sap-connection.js';
 
 /** Orders that are no longer open for revalidation (REJECTED is reserved for exception closing). */
 const CLOSED_STATUSES = ['CREATED', 'REJECTED'];
@@ -114,6 +115,7 @@ export default class SalesOrderService extends cds.ApplicationService {
 
         this._registerMappingHandlers();
         this._registerGmailHandlers();
+        this.on('sapStatus', () => checkSapConnection());
 
         return super.init();
     }

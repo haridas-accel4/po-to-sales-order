@@ -3,6 +3,7 @@ import path from 'node:path';
 import cds from '@sap/cds';
 import { registerGmailRoutes } from './srv/lib/gmail/routes.js';
 import { startPolling, stopPolling } from './srv/lib/gmail/index.js';
+import { applySapCredentialsFromEnv, logSapConnection } from './srv/lib/sap-connection.js';
 
 /**
  * Custom CAP server bootstrap (cds serve / cds watch use it automatically):
@@ -18,8 +19,16 @@ const underTest = !!process.env.NODE_TEST_CONTEXT;
 const envFile = path.join(cds.root, '.env');
 if (!underTest && fs.existsSync(envFile)) process.loadEnvFile(envFile); // existing variables win
 
+// SAP tenant from .env (S4_SALES_ORDER_API_URL / S4_USER / S4_PASSWORD); tests always use the mock
+if (!underTest) applySapCredentialsFromEnv();
+
 cds.on('bootstrap', (app) => registerGmailRoutes(app));
-if (!underTest) cds.on('served', () => startPolling());
+if (!underTest) {
+    cds.on('served', () => {
+        startPolling();
+        logSapConnection();
+    });
+}
 cds.on('shutdown', () => stopPolling());
 
 export default cds.server;
