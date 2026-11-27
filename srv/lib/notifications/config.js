@@ -10,7 +10,7 @@ import cds from '@sap/cds';
  * Read on every call so tests and restarts pick up changes.
  */
 
-export const DEFAULT_RECIPIENT = 'dev.salesops@accel4.com';
+export const DEFAULT_RECIPIENT = 'haridas.shinde@accel4.com';
 
 const DEFAULTS = {
     /** Also e-mail when SAP could not be reached (order stays VALIDATED and can be resubmitted). */
