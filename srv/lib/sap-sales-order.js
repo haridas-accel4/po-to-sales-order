@@ -16,7 +16,9 @@ export const connectSalesOrderApi = () => cds.connect.to(SAP_SERVICE);
 /**
  * Build the A_SalesOrder deep-insert payload from a VALIDATED inbound order.
  * Sales area comes from the customer mapping, never from the document.
- * The customer's PO price and currency are deliberately not sent: SAP pricing decides.
+ * The customer's PO price is deliberately not sent: selling prices may differ (discounts,
+ * bulk rates), SAP pricing decides. The PO currency is sent, so the sales order is in the same
+ * currency as the PO. Without a unit on the PO, SAP takes the unit from the material master.
  *
  * @param {object} order     InboundOrders row (customerPoNumber, poDate, requestedDeliveryDate)
  * @param {object[]} items   InboundItems with mapped material / sapUom
@@ -39,9 +41,10 @@ export function toSalesOrderPayload(order, items, customer, { salesOrderType }) 
                 Material: it.material,
                 MaterialByCustomer: it.customerMaterial,
                 RequestedQuantity: String(Number(it.quantity)),
-                RequestedQuantityUnit: it.sapUom,
+                ...(it.sapUom ? { RequestedQuantityUnit: it.sapUom } : {}),
             })),
     };
+    if (order.currency) payload.TransactionCurrency = order.currency;
     // header only: a schedule-line date is ignored on create (KBA 3730144)
     if (order.requestedDeliveryDate) payload.RequestedDeliveryDate = order.requestedDeliveryDate;
     return payload;

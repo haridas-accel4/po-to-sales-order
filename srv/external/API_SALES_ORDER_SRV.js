@@ -17,9 +17,9 @@ import cds from '@sap/cds';
 
 /** Materials that exist in the mock tenant, with their SAP list price per unit. */
 const MATERIALS = {
-    TG11: { text: 'Hex bolt M10', price: 0.24 },
-    TG12: { text: 'Hex nut M10', price: 0.09 },
-    TG13: { text: 'Washer M10', price: 11.5 },
+    TG11: { text: 'Hex bolt M10', price: 0.24, unit: 'PC' },
+    TG12: { text: 'Hex nut M10', price: 0.09, unit: 'PC' },
+    TG13: { text: 'Washer M10', price: 11.5, unit: 'KG' },
 };
 const CURRENCY = 'EUR';
 const FIRST_NUMBER = 1000000;
@@ -44,7 +44,9 @@ export default class SalesOrderApiMock extends cds.ApplicationService {
                     req.error(400, `${ref}: Material ${item.Material} does not exist or is not defined for sales org. ${order.SalesOrganization}, distr. chan. ${order.DistributionChannel}.`);
                 }
                 if (!(Number(item.RequestedQuantity) > 0)) req.error(400, `${ref}: requested quantity must be greater than zero.`);
-                if (!item.RequestedQuantityUnit) req.error(400, `${ref}: unit of measure is missing.`);
+            }
+            if (order.TransactionCurrency && !/^[A-Z]{3}$/.test(order.TransactionCurrency)) {
+                req.error(400, `Currency ${order.TransactionCurrency} is not defined.`, 'TransactionCurrency');
             }
             if (req.errors) return req.reject();
 
@@ -52,7 +54,8 @@ export default class SalesOrderApiMock extends cds.ApplicationService {
             const last = numbers.reduce((max, r) => Math.max(max, Number(r.SalesOrder) || 0), FIRST_NUMBER);
             order.SalesOrder = String(last + 1);
             order.CreationDate = new Date().toISOString().slice(0, 10);
-            order.TransactionCurrency = CURRENCY;
+            const currency = order.TransactionCurrency || CURRENCY; // from the request, else the customer's
+            order.TransactionCurrency = currency;
             order.OverallSDProcessStatus = 'A';
             order.OverallDeliveryStatus = 'A';
 
@@ -63,8 +66,9 @@ export default class SalesOrderApiMock extends cds.ApplicationService {
                 Object.assign(item, {
                     SalesOrder: order.SalesOrder,
                     SalesOrderItemText: item.SalesOrderItemText ?? MATERIALS[item.Material].text,
+                    RequestedQuantityUnit: item.RequestedQuantityUnit || MATERIALS[item.Material].unit, // material master unit
                     NetAmount: net,
-                    TransactionCurrency: CURRENCY,
+                    TransactionCurrency: currency,
                 });
             }
             order.TotalNetAmount = Math.round(total * 100) / 100;

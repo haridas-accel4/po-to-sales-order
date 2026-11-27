@@ -39,14 +39,27 @@ POs are read deterministically from fixed templates (one PO per file):
   10    ACME-BOLT-10       Hex bolt M10  100       PCS  0.25
   ```
 
-  Labels may also be written `PO Number:` / `PO No.:` and `Order Date:`. Table columns are matched
-  by name (spaces and case ignored), may be in any order, and extra columns such as `Total` are ignored.
-  Wrapped descriptions are joined; a table spanning pages repeats its header row. Sample:
-  `test/fixtures/sample-po-template.pdf` (`node test/fixtures/generate-pdf.js`).
+  Labels may also be written `PO Number:` / `PO No.:` / `Purchase Order:` and `Order Date:` / `Created on:`.
+  Table columns are matched by name or a common synonym (`Item`, `ID`, `Qty`, `Net Price`, ...; spaces and
+  case ignored), may be in any order, and extra columns such as `Total` are ignored. Only `Line`,
+  `Customer Material` and `Quantity` are required. A `Delivery Date` column is the item's date; without a
+  `Delivery Date:` label the order uses the earliest item date. Wrapped descriptions are joined; a table
+  spanning pages repeats its header row. Sample: `test/fixtures/sample-po-template.pdf`
+  (`node test/fixtures/generate-pdf.js`).
+- **SAP purchase order PDF** (the standard S/4HANA PO output form) is read as is: `Purchase Order:` /
+  `Created on:`, the table `Item | ID | Description | Quantity | Delivery Date | Net Price | Net Value`,
+  the unit inside the quantity (`1 PC`), the currency inside the price (`13.00 USD`) and the price unit
+  below it (`per 1 PC`); schedule lines and Incoterms are ignored. Thousands separators are accepted
+  there, with the decimal separator taken from the prices (`1,000 PC` / `13.00 USD` or `1.000 ST` / `13,00 EUR`).
 
-Values follow the same rules in every format: dates `YYYY-MM-DD` or `DD.MM.YYYY`, `.` as decimal
-separator, no thousands separators. Files that do not match the template end up in Exceptions with
-the reason. PDF reading can be switched off with `cds.po2so.pdfExtraction.provider = "none"`
+Values follow the same rules in every format: dates `YYYY-MM-DD`, `DD.MM.YYYY` or with an English month
+name (`Mar 6, 2026`, `6 Mar 2026`; slash dates are rejected as ambiguous), `.` as decimal separator, no
+thousands separators (except in SAP PDFs, see above). The UoM may be empty: SAP then uses the unit from
+the material master (warning). Files that do not match the template end up in Exceptions with the reason.
+
+Field rules from the PO-to-SO mapping: the PO number becomes the customer reference
+(`PurchaseOrderByCustomer`); the sales order is created in the PO's currency (`TransactionCurrency`), but
+the PO price is never sent because selling prices may differ (SAP pricing decides); tax is determined by SAP. PDF reading can be switched off with `cds.po2so.pdfExtraction.provider = "none"`
 (AI extraction for arbitrary layouts, `document-ai` / `gen-ai-hub`, is not implemented).
 
 ## Gmail Intake

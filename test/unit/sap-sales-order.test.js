@@ -27,10 +27,17 @@ describe('toSalesOrderPayload', () => {
         });
     });
 
-    test('never sends price or currency; omits a missing delivery date', () => {
+    test('never sends the price; omits a missing delivery date and currency', () => {
         const payload = toSalesOrderPayload({ ...order, requestedDeliveryDate: null }, items, customer, { salesOrderType: 'OR' });
         assert.equal('RequestedDeliveryDate' in payload, false);
         assert.doesNotMatch(JSON.stringify(payload), /Price|Currency|NetAmount/);
+    });
+
+    test('sends the PO currency; omits the unit when the PO has none (SAP: material master unit)', () => {
+        const payload = toSalesOrderPayload({ ...order, currency: 'USD' }, [{ ...items[1], sapUom: null }], customer, { salesOrderType: 'OR' });
+        assert.equal(payload.TransactionCurrency, 'USD');
+        assert.deepEqual(payload.to_Item, [{ SalesOrderItem: '10', Material: 'TG11', MaterialByCustomer: 'AC-BOLT-M8', RequestedQuantity: '500' }]);
+        assert.doesNotMatch(JSON.stringify(payload), /Price|NetAmount/);
     });
 });
 

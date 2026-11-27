@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import cds from '@sap/cds';
+import { makePdf, sapFormPages } from '../support/make-pdf.js';
 
 // Fresh in-memory database; API_SALES_ORDER_SRV is served by the local mock (srv/external)
 const { GET, POST, PATCH } = cds.test(fileURLToPath(new URL('../..', import.meta.url)), '--in-memory', '--with-mocks');
@@ -68,6 +69,27 @@ describe('Sales order creation in SAP', () => {
             [['10', 'TG11', 'ACME-BOLT-10', 100, 'PC'], ['20', 'TG12', 'ACME-NUT-10', 100, 'PC'], ['30', 'TG13', 'ACME-WASH-10', 2.5, 'KG']]);
         // SAP prices the order itself (mock list price 0.24 for TG11, PO said 0.25)
         assert.equal(Number(so.to_Item.find((i) => i.Material === 'TG11').NetAmount), 24);
+    });
+
+    test('SAP purchase order form PDF -> CREATED in the PO currency; no unit on the PO -> material master unit', async () => {
+        const pdf = makePdf(sapFormPages({
+            po: '4500000227', created: 'Mar 6, 2026',
+            items: [
+                { item: '00010', id: 'ACME-BOLT-10', description: 'Hex bolt', quantity: '1,000 PC', date: 'Mar 16, 2026', price: '13.00 USD', per: 'per 1 PC' },
+                { item: '00020', id: 'ACME-WASH-10', description: 'Washer', quantity: '3', date: 'Mar 20, 2026', price: '2.00 USD', per: 'per 1 KG' },
+            ],
+        }));
+        const result = await upload('sap-po.pdf', pdf.toString('base64'), 'application/pdf');
+        assert.equal(result.status, 'CREATED', result.errorMessage);
+        const o = await order(result.ID);
+        assert.deepEqual(o.issues.map((i) => `${i.severity}:${i.code}:${i.lineNumber}`).sort(),
+            ['WARNING:ITEM_DELIVERY_DATE:20', 'WARNING:NO_UOM:20']);
+
+        const [so] = await sapOrders({ SalesOrder: result.salesOrderNumber });
+        assert.deepEqual([so.PurchaseOrderByCustomer, so.CustomerPurchaseOrderDate, so.RequestedDeliveryDate, so.TransactionCurrency],
+            ['4500000227', '2026-03-06', '2026-03-16', 'USD']);
+        assert.deepEqual(so.to_Item.sort((a, b) => a.SalesOrderItem - b.SalesOrderItem)
+            .map((i) => [i.Material, Number(i.RequestedQuantity), i.RequestedQuantityUnit]), [['TG11', 1000, 'PC'], ['TG13', 3, 'KG']]);
     });
 
     test('valid XLSX upload -> CREATED', async () => {

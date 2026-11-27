@@ -6,6 +6,12 @@ import { cleanText } from '../text.js';
  *   CustomerPO, PODate, DeliveryDate, Line, CustomerMaterial, Description, Quantity, UoM, UnitPrice
  * Header columns are matched case-insensitively; extra columns are ignored.
  * PO header values are repeated on each row and must be identical.
+ * UoM may be empty: SAP then uses the unit from the material master.
+ *
+ * Item-level columns that only the PDF reader supplies (not part of the CSV/XLSX template):
+ *   ItemDeliveryDate  delivery date of the item (header date = earliest item date if none is given)
+ *   PriceUnit         quantity the unit price refers to ("13.00 USD per 1 PC")
+ *   Currency          currency of the item prices; all items must use the same one
  */
 export const TEMPLATE_COLUMNS = [
     'CustomerPO', 'PODate', 'DeliveryDate', 'Line', 'CustomerMaterial',
@@ -62,14 +68,28 @@ function toText(v) {
     return cleanText(v);
 }
 
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+    'august', 'september', 'october', 'november', 'december'];
+
+/** English month name or abbreviation ('Mar', 'March', 'Sept') -> 1..12, else null. */
+function monthNumber(name) {
+    const n = name.toLowerCase();
+    if (n.length < 3) return null;
+    const i = MONTHS.findIndex((m) => m.startsWith(n));
+    return i < 0 ? null : i + 1;
+}
+
 function isoDate(y, m, d) {
     const dt = new Date(Date.UTC(y, m - 1, d));
     if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
     return dt.toISOString().slice(0, 10);
 }
 
+export const DATE_FORMATS = 'YYYY-MM-DD, DD.MM.YYYY or with the month name, e.g. Mar 6, 2026 / 6 Mar 2026';
+
 /**
- * Parse a date: JS Date (XLSX date cell), 'YYYY-MM-DD' or 'DD.MM.YYYY'.
+ * Parse a date: JS Date (XLSX date cell), 'YYYY-MM-DD', 'DD.MM.YYYY' (also 'D.M.YYYY'), or with
+ * an English month name as SAP prints it: 'Mar 6, 2026', 'March 6 2026', '6 Mar 2026', '06-Mar-2026'.
  * Slash formats are rejected because DD/MM vs MM/DD is ambiguous.
  * @returns {string|null|undefined} ISO date, null if blank, undefined if invalid
  */
@@ -82,8 +102,12 @@ export function parseDate(v) {
     const s = String(v).trim();
     let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
     if (m) return isoDate(+m[1], +m[2], +m[3]) ?? undefined;
-    m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(s);
+    m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s);
     if (m) return isoDate(+m[3], +m[2], +m[1]) ?? undefined;
+    m = /^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/.exec(s);
+    if (m) return monthNumber(m[1]) ? isoDate(+m[3], monthNumber(m[1]), +m[2]) ?? undefined : undefined;
+    m = /^(\d{1,2})\.?(?:\s+|-)([A-Za-z]+)\.?(?:\s+|-)(\d{4})$/.exec(s);
+    if (m) return monthNumber(m[2]) ? isoDate(+m[3], monthNumber(m[2]), +m[1]) ?? undefined : undefined;
     return undefined;
 }
 
@@ -135,9 +159,11 @@ export function rowsToPurchaseOrder(rows, columns, method) {
     }
 
     const get = (row, col) => row.values[columns[col]];
+    const has = (col) => columns[col] !== undefined;
     let header = null;
     const items = [];
     const seenLines = new Set();
+    const currencies = new Set();
 
     for (const row of dataRows) {
         const n = row.rowNumber;
@@ -150,8 +176,8 @@ export function rowsToPurchaseOrder(rows, columns, method) {
         if (!po) err(n, 'CustomerPO', 'CustomerPO is required.');
         else if (po.length > 35) err(n, 'CustomerPO', 'CustomerPO must be at most 35 characters.');
         if (poDate === null) err(n, 'PODate', 'PODate is required.');
-        else if (poDate === undefined) err(n, 'PODate', `PODate '${get(row, 'PODate')}' is not a valid date (use YYYY-MM-DD or DD.MM.YYYY).`);
-        if (delivery === undefined) err(n, 'DeliveryDate', `DeliveryDate '${get(row, 'DeliveryDate')}' is not a valid date (use YYYY-MM-DD or DD.MM.YYYY).`);
+        else if (poDate === undefined) err(n, 'PODate', `PODate '${get(row, 'PODate')}' is not a valid date (use ${DATE_FORMATS}).`);
+        if (delivery === undefined) err(n, 'DeliveryDate', `DeliveryDate '${get(row, 'DeliveryDate')}' is not a valid date (use ${DATE_FORMATS}).`);
 
         const rowHeader = { customerPoNumber: po, poDate: poDate ?? null, requestedDeliveryDate: delivery ?? null };
         if (!header) header = rowHeader;
@@ -185,16 +211,45 @@ export function rowsToPurchaseOrder(rows, columns, method) {
         else if (quantity === undefined) err(n, 'Quantity', `Quantity '${qtyRaw}' is not a valid number (use '.' as decimal separator, max. 3 decimals, no thousands separators).`);
         else if (quantity <= 0) err(n, 'Quantity', `Quantity must be greater than zero (got ${quantity}).`);
 
+        // optional: without a UoM SAP takes the unit from the material master
         const uom = toText(get(row, 'UoM'));
-        if (!uom) err(n, 'UoM', 'UoM is required.');
-        else if (uom.length > 10) err(n, 'UoM', 'UoM must be at most 10 characters.');
+        if (uom && uom.length > 10) err(n, 'UoM', 'UoM must be at most 10 characters.');
 
         const priceRaw = get(row, 'UnitPrice');
         const unitPrice = parseDecimal(priceRaw, 2);
         if (unitPrice === undefined) err(n, 'UnitPrice', `UnitPrice '${priceRaw}' is not a valid amount (use '.' as decimal separator, max. 2 decimals).`);
         else if (unitPrice !== null && unitPrice < 0) err(n, 'UnitPrice', 'UnitPrice must not be negative.');
 
-        items.push({ lineNumber: line, customerMaterial: material, description, quantity, uom, unitPrice: unitPrice ?? null });
+        const item = { lineNumber: line, customerMaterial: material, description, quantity, uom, unitPrice: unitPrice ?? null };
+
+        if (has('ItemDeliveryDate')) {
+            const date = parseDate(get(row, 'ItemDeliveryDate'));
+            if (date === undefined) err(n, 'DeliveryDate', `Delivery date '${get(row, 'ItemDeliveryDate')}' is not a valid date (use ${DATE_FORMATS}).`);
+            item.requestedDeliveryDate = date ?? null;
+        }
+        if (has('PriceUnit')) {
+            const raw = get(row, 'PriceUnit');
+            const priceUnit = parseDecimal(raw, 0);
+            if (priceUnit === undefined || priceUnit === 0) err(n, 'PriceUnit', `Price unit '${raw}' must be a positive whole number.`);
+            item.priceUnit = priceUnit || 1;
+        }
+        if (has('Currency')) {
+            const currency = toText(get(row, 'Currency'));
+            if (currency && !/^[A-Z]{3}$/.test(currency)) err(n, 'Currency', `Currency '${currency}' is not a 3-letter ISO code.`);
+            else if (currency) currencies.add(currency);
+        }
+        items.push(item);
+    }
+
+    if (currencies.size > 1) {
+        errors.push({ rowNumber: null, field: 'Currency',
+            message: `The items use different currencies (${[...currencies].join(', ')}); a PO must be in one currency.` });
+    }
+    if (has('Currency')) header.currency = currencies.size === 1 ? [...currencies][0] : null;
+    // no order-level delivery date: the earliest item date
+    if (!header.requestedDeliveryDate) {
+        const dates = items.map((i) => i.requestedDeliveryDate).filter(Boolean).sort();
+        if (dates.length) header.requestedDeliveryDate = dates[0];
     }
 
     if (errors.length) {
