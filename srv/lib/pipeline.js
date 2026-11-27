@@ -2,7 +2,8 @@ import cds from '@sap/cds';
 import { getConfig } from './config.js';
 import { ExtractionError } from './errors.js';
 import { validateFile } from './file-validation.js';
-import { extractPurchaseOrder } from './extraction/index.js';
+import { extractPurchaseOrder, extractDocumentText } from './extraction/index.js';
+import { identifyCustomer } from './customer-identification.js';
 import { mapCustomer, loadMaterialMap, loadUomMap, mapItems } from './mapping.js';
 import { validateRequiredFields, validateQuantities, validateConfidence, determineStatus, issue } from './validation.js';
 import { connectSalesOrderApi, toSalesOrderPayload, findSalesOrder, createSalesOrder, describeSapError } from './sap-sales-order.js';
@@ -61,13 +62,25 @@ async function toBuffer(content) {
  * Entry point for every intake channel.
  * Validates and stores the original file, creates the InboundOrder and runs the pipeline.
  *
- * @param {{source:'UPLOAD'|'EMAIL', fileName:string, mimeType:string, buffer:Buffer, customerId?:string}} doc
+ * Without a customerId the customer is identified from the document and the e-mail text
+ * (sender, subject, body) by the identifiers maintained on the customers.
+ *
+ * @param {{source:'UPLOAD'|'EMAIL', fileName:string, mimeType:string, buffer:Buffer, customerId?:string,
+ *          emailText?:string}} doc
  * @returns {Promise<{ID:string, status:string, errorMessage:string|null, errorCount:number, warningCount:number}>}
  * @throws {FileValidationError} if the file is rejected (nothing is stored)
  */
-export async function ingestDocument({ source = 'UPLOAD', fileName, mimeType, buffer, customerId = null }) {
+export async function ingestDocument({ source = 'UPLOAD', fileName, mimeType, buffer, customerId = null, emailText = '' }) {
     const config = getConfig();
     const meta = validateFile({ fileName, mimeType, buffer, maxFileSize: config.maxFileSize });
+
+    let identification = null;
+    if (!customerId) {
+        const { Customers } = db();
+        const customers = await SELECT.from(Customers).columns('customerId', 'identifiers', 'active').where({ identifiers: { '!=': null } });
+        identification = identifyCustomer({ documentText: await extractDocumentText({ fileType: meta.fileType, buffer }), emailText }, customers);
+        customerId = identification.customerId;
+    }
 
     const { InboundOrders, InboundFiles } = db();
     const fileId = cds.utils.uuid();
@@ -81,7 +94,8 @@ export async function ingestDocument({ source = 'UPLOAD', fileName, mimeType, bu
         status: 'RECEIVED', file_ID: fileId,
     });
     await logEvent(orderId, 'RECEIVED', `${source}: ${fileName} (${meta.size} bytes, sha256 ${meta.sha256})`);
-    LOG.info(`Inbound order ${orderId} received from ${source}: ${fileName}`);
+    if (identification) await logEvent(orderId, 'RECEIVED', identification.message);
+    LOG.info(`Inbound order ${orderId} received from ${source}: ${fileName}${identification ? ` - ${identification.message}` : ''}`);
 
     const result = await processInboundOrder(orderId, { buffer, fileType: meta.fileType });
     if (result.status === 'NEEDS_REVIEW' || result.status === 'FAILED') await notifyIntakeException(orderId, result.status);

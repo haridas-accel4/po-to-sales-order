@@ -45,6 +45,13 @@
                     <Label text="Division" visible="{= ${mappingEdit>/type} === 'customers' }"/>
                     <Input value="{mappingEdit>/draft/division}" maxLength="2" visible="{= ${mappingEdit>/type} === 'customers' }"
                         valueState="{= ${mappingEdit>/vs/division} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/division}"/>
+                    <Label text="Identifiers" visible="{= ${mappingEdit>/type} === 'customers' }"/>
+                    <TextArea id="mapCustomerIdentifiers" value="{mappingEdit>/draft/identifiers}" maxLength="1000" rows="3" growing="true" growingMaxLines="8" width="100%"
+                        placeholder="One per line, e.g. our supplier number at this customer, its VAT number or company name"
+                        visible="{= ${mappingEdit>/type} === 'customers' }"
+                        valueState="{= ${mappingEdit>/vs/identifiers} ? 'Error' : 'None' }" valueStateText="{mappingEdit>/vs/identifiers}"/>
+                    <Text text="POs that arrive without a customer (e-mail) are assigned to this customer when one of these values appears in the attachment, or else in the e-mail, and no other customer's does."
+                        visible="{= ${mappingEdit>/type} === 'customers' }" class="sapUiTinyMarginTop"/>
 
                     <!-- material mappings -->
                     <Label text="Sold-to Party" required="true" visible="{= ${mappingEdit>/type} === 'materials' }"/>

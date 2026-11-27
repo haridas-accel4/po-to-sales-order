@@ -6,6 +6,7 @@ import { ingestDocument, processInboundOrder, validateInboundOrder, postSalesOrd
 import { MAPPING_RULES, trimTextFields, missingRequired, sameKey, conflictMessage } from './lib/mapping-validation.js';
 import * as gmail from './lib/gmail/index.js';
 import { checkSapConnection } from './lib/sap-connection.js';
+import { identifierProblems, parseIdentifiers, normalizeIdentifier } from './lib/customer-identification.js';
 
 /** Orders that are no longer open for revalidation (REJECTED is reserved for exception closing). */
 const CLOSED_STATUSES = ['CREATED', 'REJECTED'];
@@ -178,6 +179,9 @@ export default class SalesOrderService extends cds.ApplicationService {
                     for (const m of missing) req.error({ status: 400, code: 'MAPPING_REQUIRED_FIELD', message: m.message, target: m.field });
                     return;
                 }
+                if (name === 'Customers' && req.data.identifiers) {
+                    if (!(await this._checkCustomerIdentifiers(req, Customers))) return;
+                }
                 if (!isInsert) {
                     // keys cannot change on update; a new sold-to party must not orphan material mappings
                     if (name === 'Customers' && Object.hasOwn(req.data, 'soldToParty')) await this._rejectOrphaningSoldToChange(req, Customers, MaterialMappings);
@@ -224,6 +228,32 @@ export default class SalesOrderService extends cds.ApplicationService {
                 err.message = `An entry with the same key already exists (${err.message.replace(/^.*UNIQUE constraint failed:\s*/i, '')}).`;
             }
         });
+    }
+
+    /**
+     * Customer identifiers must be long enough to be meaningful and must not belong to another
+     * customer (a shared identifier would make every PO containing it ambiguous).
+     * Stores the list normalised to one identifier per line. Returns false if rejected.
+     */
+    async _checkCustomerIdentifiers(req, Customers) {
+        const problems = identifierProblems(req.data.identifiers);
+        for (const message of problems) req.error({ status: 400, code: 'INVALID_IDENTIFIER', message, target: 'identifiers' });
+        if (problems.length) return false;
+
+        const own = parseIdentifiers(req.data.identifiers);
+        const customerId = req.data.customerId ?? req.params[0]?.customerId ?? req.params[0];
+        const others = await SELECT.from(Customers).columns('customerId', 'identifiers')
+            .where({ customerId: { '!=': customerId }, identifiers: { '!=': null } });
+        for (const value of own) {
+            const owner = others.find((o) => parseIdentifiers(o.identifiers).some((v) => normalizeIdentifier(v) === normalizeIdentifier(value)));
+            if (owner) {
+                req.error({ status: 409, code: 'IDENTIFIER_CONFLICT', target: 'identifiers',
+                    message: `Identifier '${value}' is already used by customer '${owner.customerId}'; an identifier must belong to one customer.` });
+            }
+        }
+        if (req.errors) return false;
+        req.data.identifiers = own.join('\n');
+        return true;
     }
 
     /** Material mappings of a sold-to party that no other customer than `customerId` carries. */

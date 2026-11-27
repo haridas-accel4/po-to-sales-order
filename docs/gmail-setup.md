@@ -131,10 +131,18 @@ tables are not changed.
      the pipeline; file names and MIME types are not trusted.
   6. **Cursor:** the cursor advances only when the poll saw every listed message (at most 50 new
      messages per poll; more are taken on the next poll).
-- **Customer:** an email does not identify the SAP customer, so Gmail POs arrive without a customer
-  and are set to *Needs Review* by the existing validation. A reviewer selects the customer in the
-  review dialog; Save re-runs mapping, validation and the duplicate check. Nothing is guessed from
-  the sender.
+- **Customer:** the customer is identified from the attachment and the e-mail, using the
+  **Identifiers** maintained on each customer (*Mappings > Customers*): values that appear on that
+  customer's POs or e-mails, one per line, e.g. our supplier number in their system (`Supplier ID`
+  on an SAP PO), their VAT number, company name or e-mail domain.
+  - The attachment's whole text is searched first, then the sender, subject and body of the e-mail.
+    If the attachment names exactly one customer, that one is taken (the body is not consulted).
+  - Matching ignores case, spaces, dots, dashes and slashes inside a value, but a value must stand on
+    its own (`10411010` does not match `0010411010`). Inactive customers are ignored.
+  - No match, or several customers -> the PO has no customer and goes to *Needs Review*; the
+    processing log says which customers matched and why. A reviewer selects the customer in the
+    review dialog; Save re-runs mapping, validation and the duplicate check.
+  - An identifier can belong to one customer only, and needs at least 4 letters or digits.
 - **Duplicates and restarts:** each message is recorded once per mailbox and each attachment once
   per mailbox, message and MIME part. This is enforced by unique database constraints. An attachment
   and its inbound PO are saved in one transaction, so a restart or repeated poll can never create a
@@ -156,8 +164,9 @@ tables are not changed.
 - Errors are logged without tokens or secrets. An expired or revoked authorization stops the poll
   and shows *Reconnect required*.
 - **Auto-post to SAP:** if `cds.po2so.autoPost` is on, a Gmail PO that is fully valid is posted
-  exactly like an uploaded one. Because the customer is never set automatically, this normally
-  happens after review.
+  exactly like an uploaded one, including a PO whose customer was identified automatically.
+  Choose identifiers that only that customer's documents contain: anyone who can mail the inbox
+  and writes a customer's identifier into a PO or e-mail creates an order for that customer.
 
 ## 6. Disconnecting
 

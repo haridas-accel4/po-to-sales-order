@@ -67,6 +67,10 @@ the PO price is never sent because selling prices may differ (SAP pricing decide
 Customer purchase orders can be read directly from a Gmail mailbox (read-only). Matching email
 attachments (PDF, XLSX, CSV) run through the same intake pipeline as manual uploads.
 
+- The customer is identified from the attachment, or else the e-mail, by the **Identifiers**
+  maintained on each customer (e.g. our supplier number at the customer, their VAT number or name);
+  exactly one matching customer is required, otherwise the PO goes to review. Uploads without a
+  customer use the same rule.
 - Setup, configuration, polling and disconnecting: [docs/gmail-setup.md](docs/gmail-setup.md)
 - Local secrets go into `.env` (template: `.env.example`, never committed)
 - Existing database: `npm run db:migrate` (backup + additive changes only; `npm run deploy:local` re-creates all tables)
