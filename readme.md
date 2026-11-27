@@ -72,3 +72,13 @@ Valid POs are created as sales orders through the Sales Order API (`API_SALES_OR
 At startup the server logs whether the API is reachable (`[po2so] - Connected to the SAP Sales Order API at ...`
 or the reason it is not, e.g. HTTP 401). `GET /odata/v4/sales-order/sapStatus()` runs the same check on demand.
 After creating an order the app stores the sales order number returned by SAP and shows it on the PO.
+
+## Sales Order Exception E-mails
+
+When SAP sales order creation fails (SAP rejects the order, the PO already exists in SAP, or SAP
+is not reachable), an exception e-mail with the customer, PO number, status, SAP error message and
+time of failure is sent to `dev.salesops@accel4.com` (configurable). Sending uses its own SMTP
+settings, separate from the read-only Gmail intake, and never affects order processing.
+
+- Setup and behaviour: [docs/failure-notifications.md](docs/failure-notifications.md)
+- Settings go into `.env` (`SMTP_*`, `SO_FAILURE_EMAIL_*`; template: `.env.example`)

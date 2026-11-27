@@ -6,6 +6,7 @@ import { extractPurchaseOrder } from './extraction/index.js';
 import { mapCustomer, loadMaterialMap, loadUomMap, mapItems } from './mapping.js';
 import { validateRequiredFields, validateQuantities, validateConfidence, determineStatus, issue } from './validation.js';
 import { connectSalesOrderApi, toSalesOrderPayload, findSalesOrder, createSalesOrder, describeSapError } from './sap-sales-order.js';
+import { notifySalesOrderFailure } from './notifications/index.js';
 
 /**
  * Inbound PO processing pipeline - the single path for every intake channel
@@ -210,6 +211,9 @@ export async function validateInboundOrder(orderId) {
  *   SAP rejects the data                     -> FAILED, SAP messages as issues
  *   SAP not reachable / not authorized       -> stays VALIDATED with a warning; resubmit later
  *   created                                  -> CREATED with the SAP sales order number
+ *
+ * Every outcome without a sales order also triggers an exception e-mail
+ * (notifySalesOrderFailure: sent after commit, detached, never affects the order).
  */
 export async function postSalesOrder(orderId) {
     const { InboundOrders, InboundItems } = db();
@@ -231,6 +235,7 @@ export async function postSalesOrder(orderId) {
             const message = `Customer PO '${ref.customerPoNumber}' for sold-to party ${ref.soldToParty} already exists in SAP as sales order ${existing}.`;
             await addIssues(orderId, [issue('ERROR', 'DUPLICATE_PO', message, { field: 'customerPoNumber' })]);
             await setStatus(orderId, 'FAILED', message, { errorMessage: message });
+            notifySalesOrderFailure({ orderId, failureType: 'SAP_DUPLICATE', messages: [message] });
             return summarize(orderId);
         }
         salesOrder = await createSalesOrder(s4, toSalesOrderPayload(order, items, customer, { salesOrderType: getConfig().salesOrderType }));
@@ -241,12 +246,14 @@ export async function postSalesOrder(orderId) {
             await addIssues(orderId, messages.map((m) => issue('ERROR', 'SAP_ERROR', `SAP: ${m}`)));
             await setStatus(orderId, 'FAILED', `SAP rejected the sales order: ${text}`, { errorMessage: `SAP rejected the sales order:\n${text}` });
             LOG.warn(`Inbound order ${orderId}: SAP rejected the sales order (HTTP ${httpStatus}): ${text}`);
+            notifySalesOrderFailure({ orderId, failureType: 'SAP_REJECTED', messages, httpStatus });
         } else {
             const text = `SAP Sales Order API not available${httpStatus ? ` (HTTP ${httpStatus})` : ''}: ${messages.join(' ')} Resubmit the order to try again.`;
             await addIssues(orderId, [issue('WARNING', 'SAP_UNAVAILABLE', text)]);
             await UPDATE(InboundOrders, orderId).with({ errorMessage: text });
             await logEvent(orderId, 'VALIDATED', text);
             LOG.error(`Inbound order ${orderId}: Sales Order API call failed`, e);
+            notifySalesOrderFailure({ orderId, failureType: 'SAP_UNAVAILABLE', messages, httpStatus });
         }
         return summarize(orderId);
     }
