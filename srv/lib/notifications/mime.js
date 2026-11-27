@@ -9,6 +9,7 @@ import { addressOf } from './config.js';
  */
 
 const oneLine = (value) => String(value ?? '').replace(/[\r\n\t]+/g, ' ').trim();
+const MESSAGE_ID = /^<[^<>\s]{1,498}>$/;
 
 /** RFC 2047 encoded words (<= 75 chars each) for non-ASCII header text. */
 export function encodeHeader(value) {
@@ -38,21 +39,28 @@ function formatAddress(value) {
 const base64Lines = (text) => Buffer.from(text, 'utf8').toString('base64').replace(/.{1,76}/g, '$&\r\n');
 
 /**
- * @param {{from:string, to:string[], subject:string, text:string, html:string, date?:Date}} mail
+ * `inReplyTo` (the Message-ID of the e-mail answered) makes the message a reply in that
+ * thread; `replyTo` directs answers to another mailbox (e.g. the order desk).
+ *
+ * @param {{from:string, to:string[], subject:string, text:string, html:string, date?:Date, replyTo?:string|null, inReplyTo?:string|null}} mail
  * @returns {{raw:string, messageId:string, envelope:{from:string, to:string[]}}}
  */
-export function buildMessage({ from, to, subject, text, html, date = new Date() }) {
+export function buildMessage({ from, to, subject, text, html, date = new Date(), replyTo = null, inReplyTo = null }) {
     const sender = addressOf(from);
     const recipients = to.map(addressOf);
     if (!sender || recipients.some((r) => !r)) throw new Error('Invalid sender or recipient address');
+    if (replyTo && !addressOf(replyTo)) throw new Error('Invalid reply-to address');
+    const parent = inReplyTo && MESSAGE_ID.test(oneLine(inReplyTo)) ? oneLine(inReplyTo) : null;
     const messageId = `<${crypto.randomUUID()}@${sender.split('@')[1]}>`;
     const boundary = `=_po2so_${crypto.randomUUID()}`;
     const raw = [
         `From: ${formatAddress(from)}`,
         `To: ${recipients.join(', ')}`,
+        ...(replyTo ? [`Reply-To: ${formatAddress(replyTo)}`] : []),
         `Subject: ${encodeHeader(subject)}`,
         `Date: ${date.toUTCString().replace('GMT', '+0000')}`,
         `Message-ID: ${messageId}`,
+        ...(parent ? [`In-Reply-To: ${parent}`, `References: ${parent}`] : []),
         'MIME-Version: 1.0',
         'Auto-Submitted: auto-generated',
         'X-Auto-Response-Suppress: All',

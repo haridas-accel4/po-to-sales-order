@@ -73,12 +73,18 @@ At startup the server logs whether the API is reachable (`[po2so] - Connected to
 or the reason it is not, e.g. HTTP 401). `GET /odata/v4/sales-order/sapStatus()` runs the same check on demand.
 After creating an order the app stores the sales order number returned by SAP and shows it on the PO.
 
-## Sales Order Exception E-mails
+## Order Status E-mails
 
-When SAP sales order creation fails (SAP rejects the order, the PO already exists in SAP, or SAP
-is not reachable), an exception e-mail with the customer, PO number, status, SAP error message and
-time of failure is sent to `haridas.shinde@accel4.com` (configurable). Sending uses its own SMTP
-settings, separate from the read-only Gmail intake, and never affects order processing.
+- **Internal exceptions**: when SAP sales order creation fails (SAP rejects the order, the PO already
+  exists in SAP, or SAP is not reachable), and for e-mailed POs also when the PO cannot be read, needs
+  review or is a duplicate, an exception e-mail with the customer, PO number, status, error messages
+  and time is sent to `haridas.shinde@accel4.com` (configurable).
+- **E-mailed POs, created**: a "sales order created" e-mail internally, and an order confirmation
+  with our sales order number to the customer, as a reply in their thread.
+- **E-mailed POs, needs attention**: the customer gets one "we received your PO and are reviewing it" reply.
+
+Sending uses its own SMTP settings, separate from the read-only Gmail intake, and never affects order processing.
 
 - Setup and behaviour: [docs/failure-notifications.md](docs/failure-notifications.md)
-- Settings go into `.env` (`SMTP_*`, `SO_FAILURE_EMAIL_*`; template: `.env.example`)
+- Settings go into `.env` (`SMTP_*`, `SO_FAILURE_EMAIL_*`, `SO_CREATED_EMAIL_*`, `PO_CUSTOMER_EMAIL_*`; template: `.env.example`)
+- Existing local database: run `npm run db:migrate` once (adds `EmailMessages.rfcMessageId` and `FailureNotifications.audience`)

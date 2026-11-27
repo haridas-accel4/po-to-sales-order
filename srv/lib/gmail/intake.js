@@ -101,7 +101,7 @@ export async function processMessage({ client, mailbox, gmailMessageId, config }
     }
 
     const header = {
-        mailbox, gmailMessageId, threadId: parsed.threadId, sender: parsed.sender, subject: parsed.subject, receivedAt: parsed.receivedAt,
+        mailbox, gmailMessageId, threadId: parsed.threadId, rfcMessageId: parsed.rfcMessageId, sender: parsed.sender, subject: parsed.subject, receivedAt: parsed.receivedAt,
     };
     const decision = classifyMessage(parsed, { keywords: config.compiledKeywords, extensions: config.attachmentExtensions });
     if (!decision.process) {

@@ -128,6 +128,8 @@ export function parseMessage(message) {
     return {
         id: message?.id,
         threadId: message?.threadId ?? null,
+        // only a well-formed <id@host> is kept: it is later written into reply headers
+        rfcMessageId: /^<[^<>\s]{1,498}>$/.test(header(payload.headers, 'Message-ID').trim()) ? header(payload.headers, 'Message-ID').trim() : null,
         sender: header(payload.headers, 'From').slice(0, 320),
         subject: header(payload.headers, 'Subject').slice(0, 500),
         receivedAt: Number.isFinite(internal) && internal > 0 ? new Date(internal).toISOString() : null,

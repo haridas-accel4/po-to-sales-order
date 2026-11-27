@@ -242,3 +242,23 @@ describe('SMTP client (against a local fake server)', () => {
         assert.equal(isTransientMailError(e), true);
     });
 });
+
+describe('Reply headers (customer e-mails)', () => {
+    const base = { from: 'mailer@example.com', to: ['buyer@customer.example'], subject: 'Re: PO', text: 't', html: '<p>t</p>' };
+    test('a well-formed Message-ID becomes In-Reply-To / References; Reply-To is added', () => {
+        const { raw } = buildMessage({ ...base, inReplyTo: '<abc.123@mail.customer.example>', replyTo: 'Order Desk <orders@example.com>' });
+        const head = parseMail(raw).headers;
+        assert.equal(head['in-reply-to'], '<abc.123@mail.customer.example>');
+        assert.equal(head.references, '<abc.123@mail.customer.example>');
+        assert.equal(head['reply-to'], '"Order Desk" <orders@example.com>');
+    });
+    test('a malformed or injected Message-ID is dropped, not written into the headers', () => {
+        for (const bad of ['<a@b>\r\nBcc: evil@example.com', 'no-brackets@example.com', '<a b@c>']) {
+            const { raw } = buildMessage({ ...base, inReplyTo: bad });
+            assert.doesNotMatch(raw, /In-Reply-To|References|Bcc|evil/);
+        }
+    });
+    test('invalid Reply-To is rejected', () => {
+        assert.throws(() => buildMessage({ ...base, replyTo: 'not an address' }), /reply-to/);
+    });
+});
