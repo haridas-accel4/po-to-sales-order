@@ -17,7 +17,8 @@ const isActive = (row) => row.active !== false;
 export async function mapCustomer(customerId) {
     if (!customerId) {
         return { customer: null, issues: [issue('ERROR', 'CUSTOMER_MISSING',
-            'No customer identified for this PO. Set customerId to a maintained customer and revalidate.', { field: 'customerId' })] };
+            'No customer identified for this PO (see the processing log). Set the customer and revalidate, ' +
+            'or add an identifier from this PO to the customer for future POs.', { field: 'customerId' })] };
     }
     const { Customers } = cds.entities('po2so');
     const customer = await SELECT.one.from(Customers).where({ customerId });

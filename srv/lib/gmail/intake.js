@@ -124,6 +124,7 @@ export async function processMessage({ client, mailbox, gmailMessageId, config }
     }
 
     const maxFileSize = getConfig().maxFileSize;
+    const emailText = [parsed.sender, parsed.subject, parsed.plainText || parsed.htmlText].filter(Boolean).join('\n');
     let lastError = null;
     for (const att of decision.supported) {
         const done = await cds.tx(() => SELECT.one.from(T().EmailAttachments).where({ mailbox, gmailMessageId, partId: att.partId }));
@@ -142,9 +143,10 @@ export async function processMessage({ client, mailbox, gmailMessageId, config }
                 ? decodeBase64Url(att.data)
                 : await withRetry(() => client.getAttachment(gmailMessageId, att.attachmentId), retry);
 
-            // the same intake function as uploadPurchaseOrder; customer unknown -> review decides
+            // the same intake function as uploadPurchaseOrder; the customer is identified from the
+            // attachment or this e-mail (customer identifiers), otherwise review decides
             await cds.tx(async () => {
-                const order = await ingestDocument({ source: 'EMAIL', fileName, mimeType: att.mimeType, buffer, customerId: null });
+                const order = await ingestDocument({ source: 'EMAIL', fileName, mimeType: att.mimeType, buffer, customerId: null, emailText });
                 await saveAttachment(done, {
                     ...base, size: buffer.length, status: 'PROCESSED', errorCode: null, errorMessage: null, inboundOrder_ID: order.ID,
                 });

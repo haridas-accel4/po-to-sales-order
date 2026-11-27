@@ -12,6 +12,12 @@ entity Customers {
     distributionChannel   : String(2);
     division              : String(2);
     active                : Boolean default true;
+    /**
+     * Values that identify this customer on its POs or e-mails, ';' or line separated, e.g.
+     * our supplier number at the customer, its VAT number, company name or e-mail domain.
+     * Used to find the customer of a PO that arrives without one (srv/lib/customer-identification.js).
+     */
+    identifiers           : String(1000);
 }
 
 // Customer Material to SAP Material Mapping

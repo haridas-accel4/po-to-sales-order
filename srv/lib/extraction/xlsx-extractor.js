@@ -5,7 +5,7 @@ import { mapColumns, rowsToPurchaseOrder } from './template.js';
 export const METHOD = 'XLSX_TEMPLATE_V1';
 
 /** Reduce an ExcelJS cell value (rich text, formula, hyperlink, ...) to a plain value. */
-function plainValue(value) {
+export function plainValue(value) {
     if (value === null || value === undefined) return null;
     if (value instanceof Date || typeof value !== 'object') return value;
     if ('result' in value) return plainValue(value.result);          // formula

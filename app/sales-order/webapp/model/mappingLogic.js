@@ -23,7 +23,8 @@ sap.ui.define([], function () {
                 { name: "soldToParty", label: "Sold-to Party", maxLength: 10, required: true },
                 { name: "salesOrganization", label: "Sales Organization", maxLength: 4 },
                 { name: "distributionChannel", label: "Distribution Channel", maxLength: 2 },
-                { name: "division", label: "Division", maxLength: 2 }
+                { name: "division", label: "Division", maxLength: 2 },
+                { name: "identifiers", label: "Identifiers", maxLength: 1000 }
             ]
         },
         materials: {

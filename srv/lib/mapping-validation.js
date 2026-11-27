@@ -13,7 +13,7 @@ export const MAPPING_RULES = {
         label: 'Customer',
         keys: ['customerId'],
         required: ['customerId', 'customerName', 'soldToParty'],
-        text: ['customerId', 'customerName', 'soldToParty', 'salesOrganization', 'distributionChannel', 'division'],
+        text: ['customerId', 'customerName', 'soldToParty', 'salesOrganization', 'distributionChannel', 'division', 'identifiers'],
         caseInsensitiveKey: false, // matched exactly by the pipeline
     },
     MaterialMappings: {

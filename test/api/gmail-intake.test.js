@@ -197,6 +197,31 @@ describe('Gmail intake', () => {
             assert.equal(reviewed.soldToParty, '0010100001');
         });
 
+        test('the customer is identified from the attachment or the e-mail (customer identifiers)', async () => {
+            await axios.patch(`${SRV}/Customers('GLOBEX')`, { identifiers: 'globex.example' });
+            await axios.patch(`${SRV}/Customers('ACME')`, { identifiers: 'ACME Industries Ltd' });
+            try {
+                fake.addMessage({
+                    subject: 'Purchase Order 4801', from: 'Buyer <buyer@globex.example>', text: 'Order attached.',
+                    attachments: [{ fileName: 'po-4801.csv', mimeType: 'text/csv', content: csv('PO-MAIL-4801') }],
+                });
+                fake.addMessage({
+                    subject: 'Purchase Order 4802', from: 'Buyer <buyer@globex.example>', text: 'Order attached.',
+                    attachments: [{ fileName: 'po-4802.csv', mimeType: 'text/csv',
+                        content: Buffer.from(`${HEADER}\nPO-MAIL-4802,2027-05-01,2027-05-20,10,ACME-BOLT-10,Hex bolt for ACME Industries Ltd,10,PCS,0.25\n`) }],
+                });
+                const before = (await emailOrders()).length;
+                await check();
+                const orders = (await emailOrders()).slice(before);
+                const byPo = Object.fromEntries(orders.map((o) => [o.customerPoNumber, o]));
+                assert.equal(byPo['PO-MAIL-4801'].customerId, 'GLOBEX');   // from the sender
+                assert.equal(byPo['PO-MAIL-4802'].customerId, 'ACME');     // the attachment wins over the sender
+            } finally {
+                await axios.patch(`${SRV}/Customers('GLOBEX')`, { identifiers: null });
+                await axios.patch(`${SRV}/Customers('ACME')`, { identifiers: null });
+            }
+        });
+
         test('repeated polls and backfills never process a message or attachment twice', async () => {
             fake.addMessage({ subject: 'PO 5001', attachments: [{ fileName: 'po-5001.csv', mimeType: 'text/csv', content: csv('PO-MAIL-5001') }] });
             const first = await check();

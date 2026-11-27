@@ -58,6 +58,7 @@
                                     <Column width="8rem"><Text text="Sales Org."/></Column>
                                     <Column width="8rem"><Text text="Distr. Channel"/></Column>
                                     <Column width="6rem"><Text text="Division"/></Column>
+                                    <Column width="14rem"><Text text="Identifiers"/></Column>
                                     <Column width="7rem"><Text text="Status"/></Column>
                                 </columns>
                                 <items>
@@ -69,6 +70,7 @@
                                             <Text text="{mappings>salesOrganization}"/>
                                             <Text text="{mappings>distributionChannel}"/>
                                             <Text text="{mappings>division}"/>
+                                            <Text text="{mappings>identifiers}" renderWhitespace="true" wrapping="true" maxLines="3"/>
                                             <ObjectStatus
                                                 text="{= ${mappings>active} === false ? 'Inactive' : 'Active' }"
                                                 state="{= ${mappings>active} === false ? 'None' : 'Success' }"/>

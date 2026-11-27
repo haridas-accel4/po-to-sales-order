@@ -125,6 +125,11 @@ function groupLines(pieces) {
     return lines;
 }
 
+/** The text of all pages, line by line (cells separated by tabs) - used to identify the customer. */
+export function pagesToText(pages) {
+    return pages.map((pieces) => groupLines(pieces).map((line) => cells(line).map((c) => c.text).join('\t')).join('\n')).join('\n');
+}
+
 /** Merge pieces separated by less than ~half a character height into cells (words of one heading). */
 function cells(line) {
     const out = [];
