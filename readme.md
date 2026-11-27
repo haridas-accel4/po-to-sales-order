@@ -77,7 +77,7 @@ After creating an order the app stores the sales order number returned by SAP an
 
 When SAP sales order creation fails (SAP rejects the order, the PO already exists in SAP, or SAP
 is not reachable), an exception e-mail with the customer, PO number, status, SAP error message and
-time of failure is sent to `dev.salesops@accel4.com` (configurable). Sending uses its own SMTP
+time of failure is sent to `haridas.shinde@accel4.com` (configurable). Sending uses its own SMTP
 settings, separate from the read-only Gmail intake, and never affects order processing.
 
 - Setup and behaviour: [docs/failure-notifications.md](docs/failure-notifications.md)

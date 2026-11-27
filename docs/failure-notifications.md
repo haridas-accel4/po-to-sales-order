@@ -1,7 +1,7 @@
 # Sales Order Exception E-mails
 
 When SAP sales order creation fails, the app e-mails the sales operations team
-(default **dev.salesops@accel4.com**) with everything needed to investigate:
+(default **haridas.shinde@accel4.com**) with everything needed to investigate:
 
 - customer name, customer ID, sold-to party
 - customer PO number, PO date, requested delivery date, sales area
@@ -49,7 +49,7 @@ Secrets go into `.env` only (template: `.env.example`, never committed).
 
 | Variable                    | Default                    | Meaning |
 |-----------------------------|----------------------------|---------|
-| `SO_FAILURE_EMAIL_TO`       | `dev.salesops@accel4.com`  | recipient(s), comma-separated |
+| `SO_FAILURE_EMAIL_TO`       | `haridas.shinde@accel4.com`  | recipient(s), comma-separated |
 | `SO_FAILURE_EMAIL_FROM`     | `SMTP_USER`                | sender, `Name <address>` allowed |
 | `SO_FAILURE_EMAIL_ENABLED`  | `true`                     | switch the e-mails off |
 | `SMTP_HOST`                 | –                          | SMTP submission server; empty = sending not configured |

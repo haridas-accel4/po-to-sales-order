@@ -46,11 +46,11 @@ describe('failure notification config', () => {
         assert.equal(getNotificationConfig().enabled, true);
     });
 
-    test('default recipient is dev.salesops@accel4.com, enabled, STARTTLS on 587', () => {
+    test('default recipient is haridas.shinde@accel4.com, enabled, STARTTLS on 587', () => {
         withEnv({});
         const c = getNotificationConfig();
-        assert.equal(DEFAULT_RECIPIENT, 'dev.salesops@accel4.com');
-        assert.deepEqual(c.recipients, ['dev.salesops@accel4.com']);
+        assert.equal(DEFAULT_RECIPIENT, 'haridas.shinde@accel4.com');
+        assert.deepEqual(c.recipients, ['haridas.shinde@accel4.com']);
         assert.equal(c.enabled, true);
         assert.equal(c.smtp.port, 587);
         assert.equal(c.smtp.secure, false);
@@ -124,15 +124,15 @@ describe('failure e-mail content', () => {
 describe('MIME message', () => {
     test('headers, UTF-8 subject and base64 bodies round-trip', () => {
         const { raw, envelope, messageId } = buildMessage({
-            from: 'PO2SO Notifications <noreply@accel4.com>', to: ['dev.salesops@accel4.com'],
+            from: 'PO2SO Notifications <noreply@accel4.com>', to: ['haridas.shinde@accel4.com'],
             subject: 'Sales order failed: Müller GmbH – PO 1', text: 'Grüße\n.line starting with dot', html: '<p>Grüße</p>',
             date: new Date('2027-05-02T08:09:10Z'),
         });
-        assert.deepEqual(envelope, { from: 'noreply@accel4.com', to: ['dev.salesops@accel4.com'] });
+        assert.deepEqual(envelope, { from: 'noreply@accel4.com', to: ['haridas.shinde@accel4.com'] });
         assert.match(messageId, /^<[0-9a-f-]+@accel4\.com>$/);
         const mail = parseMail(raw);
         assert.equal(mail.headers.from, '"PO2SO Notifications" <noreply@accel4.com>');
-        assert.equal(mail.headers.to, 'dev.salesops@accel4.com');
+        assert.equal(mail.headers.to, 'haridas.shinde@accel4.com');
         assert.equal(mail.headers.date, 'Sun, 02 May 2027 08:09:10 +0000');
         assert.equal(mail.subject, 'Sales order failed: Müller GmbH – PO 1');
         assert.equal(mail.text, 'Grüße\n.line starting with dot');
@@ -177,7 +177,7 @@ describe('error classification', () => {
 describe('SMTP client (against a local fake server)', () => {
     let smtp;
     const settings = () => ({ host: '127.0.0.1', port: smtp.port, secure: false, requireTls: false, user: 'mailer@example.com', password: 'secret', timeoutMs: 5000 });
-    const message = () => ({ from: 'mailer@example.com', to: ['dev.salesops@accel4.com', 'second@accel4.com'], raw: 'Subject: t\r\n\r\nhello\r\n.dot line' });
+    const message = () => ({ from: 'mailer@example.com', to: ['haridas.shinde@accel4.com', 'second@accel4.com'], raw: 'Subject: t\r\n\r\nhello\r\n.dot line' });
 
     before(async () => { smtp = await startFakeSmtp(); });
     after(() => smtp.close());
@@ -190,7 +190,7 @@ describe('SMTP client (against a local fake server)', () => {
         const [m] = smtp.messages;
         assert.equal(m.user, 'mailer@example.com');
         assert.equal(m.from, 'mailer@example.com');
-        assert.deepEqual(m.to, ['dev.salesops@accel4.com', 'second@accel4.com']);
+        assert.deepEqual(m.to, ['haridas.shinde@accel4.com', 'second@accel4.com']);
         assert.equal(m.raw, 'Subject: t\r\n\r\nhello\r\n.dot line');
     });
 

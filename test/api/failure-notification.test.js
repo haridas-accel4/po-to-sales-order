@@ -6,7 +6,7 @@ import cds from '@sap/cds';
 import { startFakeSmtp, parseMail } from '../support/fake-smtp.js';
 
 // E-mails go to an in-process fake SMTP server; nothing leaves the machine.
-// The default recipient (dev.salesops@accel4.com) is used: SO_FAILURE_EMAIL_TO is not set.
+// The default recipient (haridas.shinde@accel4.com) is used: SO_FAILURE_EMAIL_TO is not set.
 const smtp = await startFakeSmtp({ users: { 'mailer@example.com': 'secret' } });
 // set again before every test: CAP copies a developer's .env into process.env at startup
 const UNSET = ['SO_FAILURE_EMAIL_TO', 'SO_FAILURE_EMAIL_ENABLED', 'SMTP_SECURE'];
@@ -85,7 +85,7 @@ describe('Exception e-mail on failed sales order creation', () => {
         assert.equal(smtp.messages.length, 0);
     });
 
-    test('SAP rejects the order -> one e-mail to dev.salesops@accel4.com with the failure details', async () => {
+    test('SAP rejects the order -> one e-mail to haridas.shinde@accel4.com with the failure details', async () => {
         const result = await upload('rejected.csv', csv('PO-N-REJ', [[10, 'ACME-NEW-1', 3]]));
         assert.equal(result.status, 'FAILED');
         await notifications.whenIdle();
@@ -93,10 +93,10 @@ describe('Exception e-mail on failed sales order creation', () => {
         const mails = mailsAbout('PO-N-REJ');
         assert.equal(mails.length, 1);
         const [mail] = mails;
-        assert.deepEqual(mail.to, ['dev.salesops@accel4.com']);
+        assert.deepEqual(mail.to, ['haridas.shinde@accel4.com']);
         assert.equal(mail.from, 'mailer@example.com');
         assert.equal(mail.user, 'mailer@example.com');
-        assert.equal(mail.headers.to, 'dev.salesops@accel4.com');
+        assert.equal(mail.headers.to, 'haridas.shinde@accel4.com');
         assert.equal(mail.subject, '[PO2SO] Sales order creation failed: PO PO-N-REJ - ACME Industries Ltd.');
         for (const expected of ['ACME Industries Ltd.', 'PO-N-REJ', 'FAILED - SAP rejected the sales order', 'Material TG99 does not exist',
             'HTTP 400', 'rejected.csv', result.ID, 'ACME-NEW-1']) {
@@ -110,7 +110,7 @@ describe('Exception e-mail on failed sales order creation', () => {
         assert.equal(row.failureType, 'SAP_REJECTED');
         assert.equal(row.attempts, 1);
         assert.equal(row.customerName, 'ACME Industries Ltd.');
-        assert.equal(row.recipients, 'dev.salesops@accel4.com');
+        assert.equal(row.recipients, 'haridas.shinde@accel4.com');
         assert.match(row.smtpResponse, /^250 /);
         assert.ok(row.sentAt && row.failedAt);
 
