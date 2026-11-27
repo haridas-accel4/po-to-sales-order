@@ -57,3 +57,18 @@ attachments (PDF, XLSX, CSV) run through the same intake pipeline as manual uplo
 - Setup, configuration, polling and disconnecting: [docs/gmail-setup.md](docs/gmail-setup.md)
 - Local secrets go into `.env` (template: `.env.example`, never committed)
 - Existing database: `npm run db:migrate` (backup + additive changes only; `npm run deploy:local` re-creates all tables)
+
+## SAP S/4HANA Connection
+
+Valid POs are created as sales orders through the Sales Order API (`API_SALES_ORDER_SRV`, OData V2).
+
+- **Local / hybrid**: set `S4_SALES_ORDER_API_URL` (service root, e.g.
+  `https://<tenant>-api.s4hana.cloud.sap/sap/opu/odata/sap/API_SALES_ORDER_SRV`), `S4_USER` and
+  `S4_PASSWORD` in `.env` (template: `.env.example`). Quote the password with single quotes if it
+  contains `#`, `$` or spaces.
+- **Production**: BTP destination `S4HC_SALES` (`package.json`, `[production]` profile).
+- **Nothing configured** (and always under `npm test`): the local mock `srv/external/API_SALES_ORDER_SRV.js`.
+
+At startup the server logs whether the API is reachable (`[po2so] - Connected to the SAP Sales Order API at ...`
+or the reason it is not, e.g. HTTP 401). `GET /odata/v4/sales-order/sapStatus()` runs the same check on demand.
+After creating an order the app stores the sales order number returned by SAP and shows it on the PO.

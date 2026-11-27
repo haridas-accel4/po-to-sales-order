@@ -178,4 +178,23 @@ service SalesOrderService {
 
     /** Remove the stored Gmail credentials (processing history is kept). */
     action disconnectGmail() returns GmailStatus;
+
+    // ---------------------------------------------------------------
+    // SAP S/4HANA connection
+    // ---------------------------------------------------------------
+
+    type SapStatus {
+        /** remote (URL + user from .env) | destination (BTP) | mock (local) */
+        mode           : String(20);
+        /** API URL, destination name or mock description */
+        target         : String(500);
+        user           : String(100);
+        connected      : Boolean;
+        message        : String(1000);
+        checkedAt      : Timestamp;
+        responseTimeMs : Integer;
+    }
+
+    /** Check that the SAP Sales Order API is reachable with the configured credentials. */
+    function sapStatus() returns SapStatus;
 }
